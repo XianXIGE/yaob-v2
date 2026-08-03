@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """币安合约 FAPI 客户端 —— 带代理 + 自实现签名, 无第三方依赖"""
-import hmac, hashlib, json, time, urllib.request, urllib.parse, os
+import hmac, hashlib, json, time, urllib.request, urllib.parse, os, math
 
 BASE = "https://fapi.binance.com"
 # 本机 Mihomo/clash 代理 (可通过环境覆盖)
@@ -56,7 +56,34 @@ class FapiClient:
         return self._get("/fapi/v1/ping")
 
     def exchange_info(self):
-        return self._get("/fapi/v1/exchangeInfo")
+        resp = self._get("/fapi/v1/exchangeInfo")
+        self._symbol_meta = {}
+        for s in resp.get("symbols", []):
+            sym = s["symbol"]
+            meta = {"stepSize": None, "tickSize": None}
+            for f in s.get("filters", []):
+                if f.get("filterType") == "LOT_SIZE":
+                    meta["stepSize"] = float(f.get("stepSize", 0))
+                elif f.get("filterType") == "PRICE_FILTER":
+                    meta["tickSize"] = float(f.get("tickSize", 0))
+            self._symbol_meta[sym] = meta
+        return resp
+
+    def _round_qty(self, symbol, qty):
+        """按合约 LOT_SIZE.stepSize 向下对齐quantity, 避免-1111精度错误."""
+        if not getattr(self, "_symbol_meta", None):
+            try:
+                self.exchange_info()
+            except Exception:
+                self._symbol_meta = {}
+        meta = self._symbol_meta.get(symbol, {})
+        step = meta.get("stepSize")
+        if step and step > 0:
+            qty = math.floor(qty / step) * step
+            # 小数点位数按stepSize决定
+            dec = max(0, len(str(step).split(".")[1]) if "." in str(step) else 0)
+            return format(qty, f".{dec}f")
+        return f"{qty:.3f}"
 
     def all_tickers(self):
         return self._get("/fapi/v1/ticker/24hr")
@@ -74,17 +101,19 @@ class FapiClient:
                          {"symbol": symbol, "leverage": lev}, signed=True, method="POST")
 
     def new_order(self, symbol, side, qty, order_type="MARKET"):
+        quantity = self._round_qty(symbol, qty)
         return self._get("/fapi/v1/order", {
             "symbol": symbol, "side": side, "type": order_type,
-            "quantity": f"{qty:.3f}", "reduceOnly": "false",
+            "quantity": quantity, "reduceOnly": "false",
         }, signed=True, method="POST")
 
     def close_position(self, symbol, qty, side="SELL"):
         """平仓: 减少对应持仓仓位 (reduceOnly=true, 不会反手开仓).
         side 为平仓方向: 平多仓传 SELL(减多头), 平空仓传 BUY(减空头)."""
+        quantity = self._round_qty(symbol, qty)
         return self._get("/fapi/v1/order", {
             "symbol": symbol, "side": side, "type": "MARKET",
-            "quantity": f"{qty:.3f}", "reduceOnly": "true",
+            "quantity": quantity, "reduceOnly": "true",
         }, signed=True, method="POST")
 
     def set_api_keys(self, key, secret):
