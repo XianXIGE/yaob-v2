@@ -59,18 +59,72 @@ class Store:
             "positions": [],
         }
         self.api = {"key": "", "secret": ""}
+        # 每用户运行时状态(候选池/持仓/资产等, 不落盘): {user: {...}}
+        self.rt_by_user = {}
+        # 自动开仓记录: {SYMBOL: {strategy, tp_ratio, sl_ratio, entry_price, open_time, qty}}
+        # 用于自动平仓引擎按策略 tp/sl 对照实时浮盈/浮亏（手动单不在此列，不受自动平仓影响）
+        self.open_records = self._load("open_records.json", {})
+
+    def save_open_records(self): self._save("open_records.json", self.open_records)
+
+    # ---------------- 用户隔离辅助 (8/3 改造) ----------------
+    def _user_trade(self, user):
+        """返回该用户的交易配置(trade子对象), 不存在则初始化默认."""
+        if user not in self.users:
+            self.users[user] = {}
+        rec = self.users[user]
+        if not isinstance(rec.get("trade"), dict):
+            rec["trade"] = {
+                "open_margin": 5.0, "leverage": 5,
+                "auto_trade_enabled": False, "margin_mode": "isolated",
+                "exclude_large_cap": True,
+                "strategy_states": {"a": True, "b": False, "c": False,
+                                    "d": False, "e": True, "f": True},
+                "api": {"key": "", "secret": ""},
+                "open_records": {},
+            }
+            self.save_users()
+        return rec["trade"]
+
+    def trade_cfg(self, user): return self._user_trade(user)
+    def trade_api(self, user): return self._user_trade(user)["api"]
+    def trade_open_records(self, user): return self._user_trade(user)["open_records"]
+
+    def trade_rt(self, user):
+        """该用户运行时状态(候选池/持仓/资产等), 内存缓存."""
+        if user not in self.rt_by_user:
+            self.rt_by_user[user] = {
+                "scanner_status": "⏳ 倒计时", "last_scan_duration": 0.0,
+                "next_scan_timestamp": time.time() + 180, "scan_start_timestamp": 0,
+                "account_total_assets": 0.0, "available_margin": 0.0,
+                "candidate_pool": [], "positions": [],
+            }
+        return self.rt_by_user[user]
+
+    def trade_params(self, user):
+        """该用户策略参数(默认 A-F 原系统真实值, 可 per-user 覆盖)."""
+        rec = self._user_trade(user)
+        p = rec.get("params")
+        if not isinstance(p, dict) or not p:
+            # 用新鲜默认(原系统真实值), 不引用可能被旧 json 污染的 self.params
+            p = self._default_params()
+            rec["params"] = p
+            self.save_users()
+        return p
+
 
     def _default_params(self):
+        # 以原系统 yang9527 真实 get_strategy_params 为准 (8/3 探测确认)
         return {
-            "a": {"lookback_days": 3, "gain_min": 0.30, "gain_max": 0.60,
-                  "vol_min": 1e7, "tp_ratio": 180, "sl_ratio": -20},
-            "b": {"gain_threshold": 0.30, "vol_min": 1e7, "tp_ratio": 90, "sl_ratio": -20},
-            "c": {"lookback_days": 3, "drop_threshold": 0.20, "vol_min": 1e7,
-                  "tp_ratio": 210, "sl_ratio": -20},
+            "a": {"lookback_days": 66, "gain_min": 0.36, "gain_max": 0.50,
+                  "vol_min": 1e7, "tp_ratio": 800, "sl_ratio": -20},
+            "b": {"gain_threshold": 0.38, "vol_min": 1e7, "tp_ratio": 60, "sl_ratio": -20},
+            "c": {"lookback_days": 7, "drop_threshold": 0.96, "vol_min": 1e8,
+                  "tp_ratio": 100, "sl_ratio": -20},
             "d": {"window_minutes": 5, "gain_threshold": 0.05, "vol_min": 1e7,
                   "tp_ratio": 60, "sl_ratio": -20},
             "e": {"peak_gain_threshold": 0.50, "retrace_target_gain": 0.10,
-                  "vol_min": 1e7, "tp_ratio": 1200, "sl_ratio": -20},
+                  "vol_min": 1e7, "tp_ratio": 1200, "sl_ratio": -86},
             "f": {"lookback_hours": 48, "fib_long": 0.618, "fib_short": 0.382,
                   "tolerance_ratio": 0.005, "vol_min": 3e7, "tp_ratio": 120, "sl_ratio": -20},
         }
@@ -293,8 +347,10 @@ def admin_delete_user():
 @app.route("/api/dashboard")
 @login_required
 def api_dashboard():
-    rt = store.rt
-    u = store.users.get(current_user()) or {}
+    user = current_user()
+    rt = store.trade_rt(user)
+    tc = store.trade_cfg(user)
+    u = store.users.get(user) or {}
     return jsonify({
         "scanner_status": rt["scanner_status"],
         "last_scan_duration": rt["last_scan_duration"],
@@ -302,15 +358,15 @@ def api_dashboard():
         "scan_start_timestamp": rt["scan_start_timestamp"],
         "account_total_assets": rt["account_total_assets"],
         "available_margin": rt["available_margin"],
-        "open_margin": store.cfg["open_margin"],
-        "leverage": store.cfg["leverage"],
-        "auto_trade_enabled": store.cfg["auto_trade_enabled"],
-        "margin_mode": store.cfg["margin_mode"],
-        "exclude_large_cap": store.cfg["exclude_large_cap"],
-        "has_api_key": bool(store.api.get("key")),
+        "open_margin": tc["open_margin"],
+        "leverage": tc["leverage"],
+        "auto_trade_enabled": tc["auto_trade_enabled"],
+        "margin_mode": tc["margin_mode"],
+        "exclude_large_cap": tc["exclude_large_cap"],
+        "has_api_key": bool(tc.get("api", {}).get("key")),
         "is_vip": _is_vip(),
         "vip_expiry": u.get("vip_expiry", ""),
-        "strategy_states": store.cfg["strategy_states"],
+        "strategy_states": tc["strategy_states"],
         "candidate_pool": rt["candidate_pool"],
         "positions": rt["positions"],
     })
@@ -326,13 +382,14 @@ def api_stats():
 @login_required
 def api_control():
     d = request.get_json(silent=True) or {}
+    tc = store.trade_cfg(current_user())
     if "open_margin" in d:
-        try: store.cfg["open_margin"] = float(d["open_margin"])
+        try: tc["open_margin"] = float(d["open_margin"])
         except Exception: pass
     if "leverage" in d:
-        try: store.cfg["leverage"] = int(d["leverage"])
+        try: tc["leverage"] = int(d["leverage"])
         except Exception: pass
-    store.save_cfg()
+    store.save_users()
     return jsonify({"status": "success"})
 
 
@@ -347,14 +404,18 @@ def set_api_keys():
     s = (d.get("api_secret") or "").strip()
     if not k or not s:
         return jsonify({"status": "error", "msg": "请完整填写API Key和Secret"})
-    store.api = {"key": k, "secret": s}
+    ta = store.trade_api(current_user())
+    ta["key"] = k; ta["secret"] = s
+    store.save_users()
     return jsonify({"status": "success", "msg": "保存成功"})
 
 
 @app.route("/api/clear_api_keys", methods=["POST"])
 @login_required
 def clear_api_keys():
-    store.api = {"key": "", "secret": ""}
+    ta = store.trade_api(current_user())
+    ta["key"] = ""; ta["secret"] = ""
+    store.save_users()
     return jsonify({"status": "success", "msg": "已清除"})
 
 
@@ -364,26 +425,30 @@ def clear_api_keys():
 @app.route("/api/toggle_auto_trade", methods=["POST"])
 @login_required
 def toggle_auto_trade():
-    store.cfg["auto_trade_enabled"] = not store.cfg["auto_trade_enabled"]
-    store.save_cfg()
+    tc = store.trade_cfg(current_user())
+    tc["auto_trade_enabled"] = not tc["auto_trade_enabled"]
+    store.save_users()
     return jsonify({"status": "success",
-                    "auto_trade_enabled": store.cfg["auto_trade_enabled"]})
+                    "auto_trade_enabled": tc["auto_trade_enabled"]})
 
 
 @app.route("/api/toggle_margin_mode", methods=["POST"])
 @login_required
 def toggle_margin_mode():
-    store.cfg["margin_mode"] = "cross" if store.cfg["margin_mode"] == "isolated" else "isolated"
-    store.save_cfg()
-    return jsonify({"status": "success", "margin_mode": store.cfg["margin_mode"]})
+    tc = store.trade_cfg(current_user())
+    tc["margin_mode"] = "cross" if tc["margin_mode"] == "isolated" else "isolated"
+    store.save_users()
+    return jsonify({"status": "success", "margin_mode": tc["margin_mode"]})
 
 
 @app.route("/api/toggle_exclude_large_cap", methods=["POST"])
 @login_required
 def toggle_exclude_large_cap():
-    store.cfg["exclude_large_cap"] = not store.cfg["exclude_large_cap"]
-    store.save_cfg()
-    return jsonify({"status": "success"})
+    tc = store.trade_cfg(current_user())
+    tc["exclude_large_cap"] = not tc["exclude_large_cap"]
+    store.save_users()
+    return jsonify({"status": "success",
+                    "exclude_large_cap": tc["exclude_large_cap"]})
 
 
 @app.route("/api/toggle_strategy", methods=["POST"])
@@ -394,12 +459,13 @@ def toggle_strategy():
         return jsonify({"status": "error", "msg": "请先升级为VIP会员"})
     d = request.get_json(silent=True) or {}
     s = (d.get("strategy") or "a").lower()
-    if s not in store.cfg["strategy_states"]:
+    tc = store.trade_cfg(current_user())
+    if s not in tc["strategy_states"]:
         return jsonify({"status": "error", "msg": "未知策略"})
-    store.cfg["strategy_states"][s] = not store.cfg["strategy_states"][s]
-    store.save_cfg()
+    tc["strategy_states"][s] = not tc["strategy_states"][s]
+    store.save_users()
     return jsonify({"status": "success", "strategy": s,
-                    "enabled": store.cfg["strategy_states"][s]})
+                    "enabled": tc["strategy_states"][s]})
 
 
 # =========================================================
@@ -408,7 +474,7 @@ def toggle_strategy():
 @app.route("/api/get_strategy_params")
 @login_required
 def get_strategy_params():
-    return jsonify(store.params)
+    return jsonify(store.trade_params(current_user()))
 
 
 @app.route("/api/save_strategy_params", methods=["POST"])
@@ -418,13 +484,14 @@ def save_strategy_params():
     sp = d.get("strategy_params")
     if not isinstance(sp, dict):
         return jsonify({"status": "error", "msg": "参数格式错误"})
-    for k in store.params:
+    params = store.trade_params(current_user())
+    for k in params:
         if isinstance(sp.get(k), dict):
             for kk, v in sp[k].items():
-                if kk in store.params[k]:
-                    try: store.params[k][kk] = float(v)
+                if kk in params[k]:
+                    try: params[k][kk] = float(v)
                     except Exception: pass
-    store.save_params()
+    store.save_users()
     return jsonify({"status": "success"})
 
 
@@ -636,11 +703,13 @@ CHECKS = {"a": lambda f, s, t, p: check_a(t, p),
           "f": lambda f, s, t, p: check_f(t, p)}
 
 
-def _candidates(tickers):
-    """扫描所有开着策略的币种，生成候选池
+def _candidates(tickers, user):
+    """扫描所有开着策略的币种，生成候选池(按用户隔离: 用该用户的strategy_states/params/exclude)
     优化: 先用 ticker 24h数据粗筛(涨幅/成交额), 命中才调 klines 细查
     """
-    states = store.cfg["strategy_states"]
+    tc = store.trade_cfg(user)
+    states = tc["strategy_states"]
+    params = store.trade_params(user)
     excluded = _excluded_set()
     pool = []
     if SCAN_SYMBOLS:
@@ -648,13 +717,13 @@ def _candidates(tickers):
     else:
         symbols = [s for s in tickers if s.endswith("USDT")]
     # 粗筛: 记录每个币最低所需成交额(开着策略中最低的vol_min)
-    min_vol = min([store.params[k]["vol_min"] for k in "abcdef" if states.get(k)] or [0])
+    min_vol = min([params[k]["vol_min"] for k in "abcdef" if states.get(k)] or [0])
     for sym in symbols[:600]:
         try:
             tick = tickers.get(sym)
             if not tick:
                 continue
-            if store.cfg["exclude_large_cap"] and sym in excluded:
+            if tc["exclude_large_cap"] and sym in excluded:
                 continue
             qv = float(tick.get("quoteVolume", 0))
             if qv == 0 or qv < min_vol:
@@ -663,7 +732,7 @@ def _candidates(tickers):
             for sk, fn in CHECKS.items():
                 if not states.get(sk):
                     continue
-                sig = fn(fapi, sym, tick, store.params[sk])
+                sig = fn(fapi, sym, tick, params[sk])
                 if sig:
                     sig["symbol"] = _norm_symbol(sym)
                     sig["current_price"] = float(tick["lastPrice"])
@@ -674,25 +743,43 @@ def _candidates(tickers):
                     break  # 每币优先取一个信号
         except (BinanceError, Exception):
             continue
-    pool.sort(key=lambda x: x["priority"], reverse=True)
-    return pool[:10]
+    # 原系统排序: 先按方向分组(SHORT在前/LONG在后), 组内按 priority 降序 (8/3 探测确认)
+    shorts = [c for c in pool if c.get("direction") == "SHORT"]
+    longs = [c for c in pool if c.get("direction") != "SHORT"]
+    shorts.sort(key=lambda x: x["priority"], reverse=True)
+    longs.sort(key=lambda x: x["priority"], reverse=True)
+    return (shorts + longs)[:10]
 
 
-def run_scan():
+def run_scan(user=None):
+    """按用户执行一次扫描: 生成候选池 + 更新持仓/资产 + 自动平仓/开仓.
+    用户隔离: 每用户用自己的 api/策略状态/参数/开仓记录."""
     global fapi
-    store.rt["scanner_status"] = "正在扫描..."
-    store.rt["scan_start_timestamp"] = int(time.time())
+    if not user:
+        try:
+            user = current_user()  # 单用户/请求触发时兜底
+        except Exception:
+            user = next(iter(store.users), None)  # 无request context时用任意用户
+    if not user:
+        return  # 无可用用户则不扫描
+    rt = store.trade_rt(user)
+    tc = store.trade_cfg(user)
+    ta = store.trade_api(user)
+    tor = store.trade_open_records(user)
+    params = store.trade_params(user)
+    rt["scanner_status"] = "正在扫描..."
+    rt["scan_start_timestamp"] = int(time.time())
     st = time.time()
     try:
-        fapi.set_api_keys(store.api["key"], store.api["secret"])
+        fapi.set_api_keys(ta.get("key", ""), ta.get("secret", ""))
         tickers = {t["symbol"]: t for t in fapi.all_tickers()}
-        pool = _candidates(tickers)
-        store.rt["candidate_pool"] = pool
+        pool = _candidates(tickers, user)
+        rt["candidate_pool"] = pool
         # 真实账户资产 + 持仓
         if not fapi._dry_run:
             acct = fapi.account()
-            store.rt["account_total_assets"] = float(acct.get("totalMarginBalance", 0))
-            store.rt["available_margin"] = float(acct.get("availableBalance", 0))
+            rt["account_total_assets"] = float(acct.get("totalMarginBalance", 0))
+            rt["available_margin"] = float(acct.get("availableBalance", 0))
             pos = []
             for p in acct.get("positions", []):
                 amt = float(p.get("positionAmt", 0))
@@ -708,43 +795,156 @@ def run_scan():
                     "open_reason": "", "current_price": float(p.get("entryPrice", 0)),
                     "pnl": pnl, "pnl_ratio": pnl / mg * 100 if mg else 0,
                 })
-            store.rt["positions"] = pos
-        # 自动交易：尝试对高优先级候选开仓
-        if store.cfg["auto_trade_enabled"] and not fapi._dry_run:
+            rt["positions"] = pos
+        # 自动交易：先自动平仓检查，再对高优先级候选开仓
+        if tc["auto_trade_enabled"] and ta.get("key") and not fapi._dry_run:
+            # ---- 自动平仓引擎：按策略 tp_ratio / sl_ratio 对照实时浮盈亏损 ----
+            # 仅处理系统自动开仓记录(open_records)，手动单不受影响
+            try:
+                acct0 = fapi.account()
+                live = {p["symbol"]: p for p in acct0.get("positions", []) if float(p.get("positionAmt", 0)) != 0}
+            except Exception:
+                live = {}
+            if tor:
+                for sym0 in list(tor.keys()):
+                    rec = tor[sym0]
+                    pos = live.get(sym0)
+                    if not pos:
+                        # 该币已无持仓（手动平/已平/强平），清理残留记录
+                        tor.pop(sym0, None); store.save_users()
+                        continue
+                    entry = float(rec.get("entry_price", 0))
+                    last = float(pos.get("lastPrice") or pos.get("entryPrice", 0))  # 实际成交均价兜底
+                    # 用实时最新价计算浮盈/浮亏比例
+                    try:
+                        tick = tickers.get(sym0)
+                        if not tick:
+                            tick = tickers.get(sym0.rstrip("USDT") + "USDT")
+                        if tick:
+                            last = float(tick["lastPrice"])
+                    except Exception:
+                        pass
+                    amt = float(pos.get("positionAmt", 0))
+                    if entry <= 0:
+                        mg = float(pos.get("initialMargin", 0))
+                        pnl = float(pos.get("unrealizedProfit", 0))
+                        ratio = pnl / mg * 100 if mg else 0
+                    elif amt > 0:  # 多头
+                        ratio = (last - entry) / entry * 100
+                    else:  # 空头
+                        ratio = (entry - last) / entry * 100
+                    tp = float(rec.get("tp_ratio", 0))
+                    sl = float(rec.get("sl_ratio", 0))
+                    qty = abs(amt)
+                    if qty <= 0:
+                        continue
+                    side = "SELL" if amt > 0 else "BUY"
+                    # 触发止盈(stop_profit) 或 止损(stop_loss)
+                    closed = False
+                    if tp > 0 and ratio >= tp:
+                        print(f"[auto-close:{user}] {sym0} 止盈 ratio={ratio:.2f}% >= tp={tp}")
+                        closed = True
+                    elif sl < 0 and ratio <= sl:
+                        print(f"[auto-close:{user}] {sym0} 止损 ratio={ratio:.2f}% <= sl={sl}")
+                        closed = True
+                    if closed:
+                        try:
+                            fapi.close_position(sym0, qty, side=side)
+                            print(f"[auto-close:{user}] {sym0} 已平 {qty} ({side})")
+                            tor.pop(sym0, None)
+                            store.save_users()
+                        except BinanceError as e:
+                            print(f"[auto-close:{user}] {sym0} 平仓失败: {e}")
+
+            # 当前真实持仓币种集合（大小写归一）
+            held = set()
+            try:
+                acct = fapi.account()
+                for p in acct.get("positions", []):
+                    if float(p.get("positionAmt", 0)) != 0:
+                        held.add(p["symbol"])
+            except Exception:
+                held = set()  # 拿不到持仓时不阻断扫描
             opened = []
+            # 原系统开仓保证金硬门槛: 可用保证金 >= open_margin 才开, 否则拒开(8/3探测确认)
+            avail = rt.get("available_margin") or 0
+            open_margin = tc["open_margin"]
             for cand in pool[:3]:
-                sym0 = cand["symbol"].replace("/", "")
+                sym0 = cand["symbol"].replace("/", "").upper()
+                if sym0 in held:
+                    continue  # 已持仓，不重复开仓
+                # 保证金门槛(原系统 unopen_reason=保证金不足(x<y))
+                if avail < open_margin:
+                    cand["unopen_reason"] = f"保证金不足({avail:.2f}<{open_margin:.2f})"
+                    continue
                 side = "SELL" if cand["direction"] == "SHORT" else "BUY"
                 price = cand["current_price"]
-                qty = store.cfg["open_margin"] * store.cfg["leverage"] / price if price > 0 else 0
+                qty = open_margin * tc["leverage"] / price if price > 0 else 0
                 if qty <= 0:
                     continue
                 try:
-                    fapi.set_leverage(sym0, store.cfg["leverage"])
+                    fapi.set_leverage(sym0, tc["leverage"])
                     fapi.new_order(sym0, side, qty)
                     opened.append(cand["symbol"])
+                    avail -= open_margin  # 每开一单扣减保证金配额
+                    # 记录该笔自动单，用于后续自动平仓(按策略 tp/sl)
+                    tor[sym0] = {
+                        "strategy": cand.get("strategy", ""),
+                        "tp_ratio": float(params[cand.get("strategy", "")]["tp_ratio"]) if cand.get("strategy") in params else 0,
+                        "sl_ratio": float(params[cand.get("strategy", "")]["sl_ratio"]) if cand.get("strategy") in params else 0,
+                        "entry_price": price, "open_time": time.strftime("%Y-%m-%d %H:%M:%S"),
+                        "qty": qty,
+                    }
+                    store.save_users()
+                    held.add(sym0)  # 本轮内同币不再重复尝试
                 except BinanceError as e:
-                    print(f"[auto-trade] {sym0} 开仓失败: {e}")
+                    print(f"[auto-trade:{user}] {sym0} 开仓失败: {e}")
             if opened:
-                print(f"[auto-trade] 开仓 {opened}")
-        store.rt["scanner_status"] = "⏳ 倒计时"
-        store.rt["last_scan_duration"] = round(time.time() - st, 1)
-        store.rt["next_scan_timestamp"] = time.time() + 60
+                print(f"[auto-trade:{user}] 开仓 {opened}")
+        rt["scanner_status"] = "⏳ 倒计时"
+        rt["last_scan_duration"] = round(time.time() - st, 1)
+        rt["next_scan_timestamp"] = time.time() + 60
     except BinanceError as e:
-        print(f"[scan] FAPI错误: {e}")
-        store.rt["scanner_status"] = f"行情获取失败"
+        print(f"[scan:{user}] FAPI错误: {e}")
+        rt["scanner_status"] = f"行情获取失败"
     except Exception as e:
-        print(f"[scan] err: {e}")
-        store.rt["scanner_status"] = "扫描异常"
+        print(f"[scan:{user}] err: {e}")
+        rt["scanner_status"] = "扫描异常"
+
+
+def _active_traders():
+    """需要自动交易的用户: 有 API key 且 auto_trade 开启(优先), 否则至少配了 key."""
+    out = []
+    for u, rec in store.users.items():
+        t = rec.get("trade")
+        if not t:
+            continue
+        if t.get("api", {}).get("key") and t.get("auto_trade_enabled"):
+            out.append(u)
+        elif t.get("api", {}).get("key") and not out:
+            out.append(u)  # 有key但没开auto_trade的用户至少更新行情/持仓
+    return out
 
 
 def scan_loop():
     while True:
         try:
-            run_scan()
+            traders = _active_traders()
+            if traders:
+                for u in traders:
+                    run_scan(u)
+            else:
+                run_scan(admin_default_user() if False else None)
         except Exception as e:
             print("[scan] loop err", e)
         time.sleep(60)
+
+
+def admin_default_user():
+    """后台兜底: 返回唯一/管理员用户, 供无活跃交易者时也更新面板."""
+    for u in store.users:
+        return u
+    return None
 
 
 def start_scanner():

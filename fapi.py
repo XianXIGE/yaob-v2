@@ -79,6 +79,14 @@ class FapiClient:
             "quantity": f"{qty:.3f}", "reduceOnly": "false",
         }, signed=True, method="POST")
 
+    def close_position(self, symbol, qty, side="SELL"):
+        """平仓: 减少对应持仓仓位 (reduceOnly=true, 不会反手开仓).
+        side 为平仓方向: 平多仓传 SELL(减多头), 平空仓传 BUY(减空头)."""
+        return self._get("/fapi/v1/order", {
+            "symbol": symbol, "side": side, "type": "MARKET",
+            "quantity": f"{qty:.3f}", "reduceOnly": "true",
+        }, signed=True, method="POST")
+
     def set_api_keys(self, key, secret):
         self.api_key = key
         self.api_secret = secret
