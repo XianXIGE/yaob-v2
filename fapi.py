@@ -69,8 +69,12 @@ class FapiClient:
             self._symbol_meta[sym] = meta
         return resp
 
-    def _round_qty(self, symbol, qty):
-        """按合约 LOT_SIZE.stepSize 向下对齐quantity, 避免-1111精度错误."""
+    def _round_qty(self, symbol, qty, mode="down"):
+        """按合约 LOT_SIZE.stepSize 对齐quantity, 避免-1111精度错误.
+        mode:
+          down  -> 向下取整(floor): 开仓用, 防止超额开户/超保证金
+          up    -> 向上取整(ceil):  平仓用, 确保把剩余仓位清光不残留(如持仓0.1step/0.001 向下取整会剩0)
+        """
         if not getattr(self, "_symbol_meta", None):
             try:
                 self.exchange_info()
@@ -79,7 +83,8 @@ class FapiClient:
         meta = self._symbol_meta.get(symbol, {})
         step = meta.get("stepSize")
         if step and step > 0:
-            qty = math.floor(qty / step) * step
+            raw = qty / step
+            qty = math.floor(raw) * step if mode == "down" else math.ceil(raw) * step
             # 小数点位数按stepSize决定
             dec = max(0, len(str(step).split(".")[1]) if "." in str(step) else 0)
             return format(qty, f".{dec}f")
@@ -101,7 +106,7 @@ class FapiClient:
                          {"symbol": symbol, "leverage": lev}, signed=True, method="POST")
 
     def new_order(self, symbol, side, qty, order_type="MARKET"):
-        quantity = self._round_qty(symbol, qty)
+        quantity = self._round_qty(symbol, qty, mode="down")
         return self._get("/fapi/v1/order", {
             "symbol": symbol, "side": side, "type": order_type,
             "quantity": quantity, "reduceOnly": "false",
@@ -109,8 +114,9 @@ class FapiClient:
 
     def close_position(self, symbol, qty, side="SELL"):
         """平仓: 减少对应持仓仓位 (reduceOnly=true, 不会反手开仓).
-        side 为平仓方向: 平多仓传 SELL(减多头), 平空仓传 BUY(减空头)."""
-        quantity = self._round_qty(symbol, qty)
+        side 为平仓方向: 平多仓传 SELL(减多头), 平空仓传 BUY(减空头).
+        数量向上取整(ceil)到stepSize, 确保清仓彻底, 不残留碎单(修复剩0.01问题)."""
+        quantity = self._round_qty(symbol, qty, mode="up")
         return self._get("/fapi/v1/order", {
             "symbol": symbol, "side": side, "type": "MARKET",
             "quantity": quantity, "reduceOnly": "true",
