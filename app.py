@@ -82,6 +82,7 @@ class Store:
                                     "d": False, "e": True, "f": True},
                 "api": {"key": "", "secret": ""},
                 "open_records": {},
+                "trade_history": [],
             }
             self.save_users()
         return rec["trade"]
@@ -89,6 +90,10 @@ class Store:
     def trade_cfg(self, user): return self._user_trade(user)
     def trade_api(self, user): return self._user_trade(user)["api"]
     def trade_open_records(self, user): return self._user_trade(user)["open_records"]
+
+    def trade_history(self, user):
+        """该用户历史成交列表(每次开仓留单, 平仓补充盈亏)."""
+        return self._user_trade(user).get("trade_history", [])
 
     def trade_rt(self, user):
         """该用户运行时状态(候选池/持仓/资产等), 内存缓存."""
@@ -581,6 +586,83 @@ def reset_stats():
     return jsonify({"status": "success"})
 
 
+@app.route("/api/trade_history", methods=["GET"])
+@login_required
+def api_trade_history():
+    """历史成交记录列表(倒序: 最新在前)."""
+    hist = store.trade_history(current_user())
+    return jsonify({"trades": list(reversed(hist)), "total": len(hist)})
+
+
+@app.route("/api/strategy_stats", methods=["GET"])
+@login_required
+def api_strategy_stats():
+    """按策略的历史表现统计: 次数/胜率/累计盈亏/止盈止损."""
+    hist = store.trade_history(current_user())
+    closed = [h for h in hist if h.get("status") == "CLOSED"]
+    strat = {}
+    for h in closed:
+        s = h.get("strategy", "A")
+        st = strat.setdefault(s, {"trades": 0, "wins": 0, "pnl_sum": 0.0,
+                                  "tp": 0, "sl": 0, "manual": 0, "open_pnl": 0})
+        st["trades"] += 1
+        r = h.get("pnl_ratio")
+        if r is not None:
+            st["pnl_sum"] += r
+            if r > 0: st["wins"] += 1
+            if h.get("close_reason") == "tp": st["tp"] += 1
+            elif h.get("close_reason") == "sl": st["sl"] += 1
+            else: st["manual"] += 1
+        else:
+            st["open_pnl"] += 1
+    out = []
+    for s, st in strat.items():
+        out.append({
+            "strategy": s,
+            "type": STAT.get(s, s),
+            "trades": st["trades"],
+            "win_rate": round(st["wins"] / st["trades"] * 100, 1) if st["trades"] else 0,
+            "pnl_sum": round(st["pnl_sum"], 2),
+            "tp": st["tp"], "sl": st["sl"], "manual": st["manual"],
+        })
+    out.sort(key=lambda x: -x["trades"])
+    return jsonify({"strategy_stats": out})
+
+
+@app.route("/api/trade_profit_stats", methods=["GET"])
+@login_required
+def api_trade_profit_stats():
+    """按天分布: 每天盈亏/交易次数/胜率."""
+    hist = store.trade_history(current_user())
+    closed = [h for h in hist if h.get("status") == "CLOSED"]
+    daily = {}
+    for h in closed:
+        day = (h.get("close_time") or h.get("open_time") or "")[:10]
+        if not day: continue
+        d = daily.setdefault(day, {"pnl": 0.0, "trades": 0, "wins": 0})
+        d["trades"] += 1
+        r = h.get("pnl_ratio")
+        if r is not None:
+            d["pnl"] += r
+            if r > 0: d["wins"] += 1
+    out = []
+    for d, v in sorted(daily.items(), reverse=True):
+        out.append({"day": d, "pnl": round(v["pnl"], 2), "trades": v["trades"],
+                    "win_rate": round(v["wins"] / v["trades"] * 100, 1) if v["trades"] else 0})
+    # 按标的分布
+    bysym = {}
+    for h in closed:
+        s = h.get("symbol", ""); b = bysym.setdefault(s, {"trades": 0, "pnl": 0.0, "wins": 0})
+        b["trades"] += 1; r = h.get("pnl_ratio")
+        if r is not None:
+            b["pnl"] += r
+            if r > 0: b["wins"] += 1
+    syms = [{"symbol": s, "trades": v["trades"], "pnl": round(v["pnl"], 2),
+             "win_rate": round(v["wins"] / v["trades"] * 100, 1) if v["trades"] else 0}
+            for s, v in sorted(bysym.items(), key=lambda x: -x[1]["pnl"])]
+    return jsonify({"daily": out, "by_symbol": syms})
+
+
 # =========================================================
 # 扫描引擎（币安 FAPI 真实实现，走本机代理）
 # =========================================================
@@ -810,7 +892,16 @@ def run_scan(user=None):
                     rec = tor[sym0]
                     pos = live.get(sym0)
                     if not pos:
-                        # 该币已无持仓（手动平/已平/强平），清理残留记录
+                        # 该币已无持仓（手动平/已平/强平），清理残留记录并回填为 manual
+                        reason = "manual"
+                        hist = store.trade_history(user)
+                        for h in reversed(hist):
+                            if h.get("symbol") == sym0 and h.get("status") == "OPEN":
+                                h["status"] = "CLOSED"
+                                h["close_time"] = time.strftime("%Y-%m-%d %H:%M:%S")
+                                h["close_reason"] = reason
+                                h["pnl_ratio"] = None
+                                break
                         tor.pop(sym0, None); store.save_users()
                         continue
                     entry = float(rec.get("entry_price", 0))
@@ -851,6 +942,18 @@ def run_scan(user=None):
                         try:
                             fapi.close_position(sym0, qty, side=side)
                             print(f"[auto-close:{user}] {sym0} 已平 {qty} ({side})")
+                            # 回填历史成交记录(OPEN->CLOSED, 记平仓价/盈亏/结果)
+                            reason = "tp" if (tp > 0 and ratio >= tp) else ("sl" if (sl < 0 and ratio <= sl) else "manual")
+                            same_price_match = "open_price==rec.entry"
+                            hist = store.trade_history(user)
+                            for h in reversed(hist):  # 倒序找该币最近一条OPEN
+                                if h.get("symbol") == sym0 and h.get("status") == "OPEN" and h.get("open_price") == entry:
+                                    h["status"] = "CLOSED"
+                                    h["close_price"] = last
+                                    h["close_time"] = time.strftime("%Y-%m-%d %H:%M:%S")
+                                    h["close_reason"] = reason
+                                    h["pnl_ratio"] = round(ratio, 4)
+                                    break
                             tor.pop(sym0, None)
                             store.save_users()
                         except BinanceError as e:
@@ -888,13 +991,23 @@ def run_scan(user=None):
                     opened.append(cand["symbol"])
                     avail -= open_margin  # 每开一单扣减保证金配额
                     # 记录该笔自动单，用于后续自动平仓(按策略 tp/sl)
+                    now_s = time.strftime("%Y-%m-%d %H:%M:%S")
                     tor[sym0] = {
                         "strategy": cand.get("strategy", ""),
                         "tp_ratio": float(params[cand.get("strategy", "")]["tp_ratio"]) if cand.get("strategy") in params else 0,
                         "sl_ratio": float(params[cand.get("strategy", "")]["sl_ratio"]) if cand.get("strategy") in params else 0,
-                        "entry_price": price, "open_time": time.strftime("%Y-%m-%d %H:%M:%S"),
+                        "entry_price": price, "open_time": now_s,
                         "qty": qty,
                     }
+                    # 历史成交落盘: 开仓记一笔(OPEN), 平仓时用 symbol 回填结果
+                    store.trade_history(user).append({
+                        "symbol": sym0, "direction": cand.get("direction", ""),
+                        "strategy": cand.get("strategy", ""), "qty": qty,
+                        "open_price": price, "open_time": now_s,
+                        "close_price": None, "close_time": None,
+                        "pnl_ratio": None, "close_reason": None,  # tp/sl/manual
+                        "status": "OPEN",
+                    })
                     store.save_users()
                     held.add(sym0)  # 本轮内同币不再重复尝试
                 except BinanceError as e:

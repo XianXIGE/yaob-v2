@@ -416,6 +416,49 @@
         </table>
     </div>
 
+    <!-- ===== 历史数据板块 ===== -->
+    <h5 class="fw-bold text-dark mb-2 d-flex flex-wrap align-items-center gap-3">
+        <span><i class="fas fa-history text-warning me-2"></i>历史数据</span>
+        <small class="text-secondary fw-normal">已平仓成交记录 · 按策略/按天统计（历史自本次升级后开始记录）</small>
+    </h5>
+
+    <!-- 策略表现统计 -->
+    <div class="table-responsive mb-3">
+        <table class="table table-custom table-hover align-middle" style="max-height:260px;">
+            <thead class="table-light">
+                <tr>
+                    <th>策略</th><th>类型</th><th>交易次数</th><th>胜率</th><th>累计盈亏比%</th><th>止盈</th><th>止损</th><th>手动/其他</th>
+                </tr>
+            </thead>
+            <tbody id="strategy_stats_table"><tr><td colspan="8" class="text-muted text-center">加载中...</td></tr></tbody>
+        </table>
+    </div>
+
+    <!-- 按天分布 -->
+    <div class="table-responsive mb-3">
+        <div class="small text-muted mb-1"><i class="fas fa-calendar-day me-1"></i>按天盈亏分布</div>
+        <table class="table table-custom table-hover align-middle" style="max-height:240px;">
+            <thead class="table-light">
+                <tr><th>日期</th><th>交易次数</th><th>胜率</th><th>当日盈亏比%</th></tr>
+            </thead>
+            <tbody id="daily_stats_table"><tr><td colspan="4" class="text-muted text-center">加载中...</td></tr></tbody>
+        </table>
+    </div>
+
+    <!-- 历史成交记录 -->
+    <div class="table-responsive mb-3">
+        <div class="small text-muted mb-1"><i class="fas fa-list me-1"></i>历史成交明细（最新在前）</div>
+        <table class="table table-custom table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>币种</th><th>策略</th><th>方向</th><th>开仓价</th><th>开仓时间</th>
+                    <th>平仓价</th><th>平仓时间</th><th>盈亏%</th><th>结果</th><th>状态</th>
+                </tr>
+            </thead>
+            <tbody id="history_table"><tr><td colspan="10" class="text-muted text-center">加载中...</td></tr></tbody>
+        </table>
+    </div>
+
     <div class="footer-note">
         <i class="fas fa-shield-alt me-1 text-secondary"></i> 各策略止盈止损比例可独立配置 &nbsp;&nbsp;|&nbsp;&nbsp;
         <i class="fas fa-clock me-1 text-secondary"></i> 数据每1秒自动刷新 &nbsp;&nbsp;|&nbsp;&nbsp;
@@ -1376,6 +1419,60 @@
         fetchDashboard();
         dashboardInterval = setInterval(fetchDashboard, 1000);
         setInterval(localEngineClock, 1000);
+
+        // ===== 历史数据板块(30秒刷新, 平仓才变化, 不随1秒轮询) =====
+        function renderStrategyStats(list) {
+            const tb = $('strategy_stats_table');
+            if (!tb) return;
+            if (!list || !list.length) { tb.innerHTML = '<tr><td colspan="8" class="text-muted text-center">暂无已平仓交易</td></tr>'; return; }
+            tb.innerHTML = list.map(s => {
+                const pnlColor = s.pnl_sum >= 0 ? 'text-success' : 'text-danger';
+                return `<tr>
+                    <td><b>${s.strategy}</b></td><td>${s.type}</td><td>${s.trades}</td>
+                    <td>${s.win_rate}%</td>
+                    <td class="${pnlColor}">${s.pnl_sum}%</td>
+                    <td class="text-success">${s.tp}</td>
+                    <td class="text-danger">${s.sl}</td>
+                    <td class="text-muted">${s.manual}</td>
+                </tr>`;
+            }).join('');
+        }
+        function renderDaily(daily) {
+            const tb = $('daily_stats_table');
+            if (!tb) return;
+            if (!daily || !daily.length) { tb.innerHTML = '<tr><td colspan="4" class="text-muted text-center">暂无数据</td></tr>'; return; }
+            tb.innerHTML = daily.map(d => {
+                const c = d.pnl >= 0 ? 'text-success' : 'text-danger';
+                return `<tr><td>${d.day}</td><td>${d.trades}</td><td>${d.win_rate}%</td><td class="${c}">${d.pnl}%</td></tr>`;
+            }).join('');
+        }
+        function renderHistory(trades) {
+            const tb = $('history_table');
+            if (!tb) return;
+            if (!trades || !trades.length) { tb.innerHTML = '<tr><td colspan="10" class="text-muted text-center">暂无已平仓交易记录</td></tr>'; return; }
+            tb.innerHTML = trades.map(h => {
+                const color = h.pnl_ratio === null ? 'text-muted' : (h.pnl_ratio >= 0 ? 'text-success' : 'text-danger');
+                const reason = h.close_reason === 'tp' ? '<span class="badge bg-success">止盈</span>'
+                    : h.close_reason === 'sl' ? '<span class="badge bg-danger">止损</span>'
+                    : h.close_reason === 'manual' ? '<span class="badge bg-secondary">手动/强平</span>' : '-';
+                const st = h.status === 'CLOSED' ? '<span class="badge bg-secondary">已平</span>' : '<span class="badge bg-primary">持仓中</span>';
+                return `<tr>
+                    <td><b>${h.symbol||''}</b></td><td>${h.strategy||''}</td>
+                    <td>${h.direction==='SHORT'?'<span class="text-danger">空</span>':'<span class="text-success">多</span>'}</td>
+                    <td>${h.open_price!==null?Number(h.open_price).toFixed(2):'-'}</td><td>${h.open_time||'-'}</td>
+                    <td>${h.close_price!==null?Number(h.close_price).toFixed(2):'-'}</td><td>${h.close_time||'-'}</td>
+                    <td class="${color}">${h.pnl_ratio===null?'-':h.pnl_ratio+'%'}</td>
+                    <td>${reason}</td><td>${st}</td>
+                </tr>`;
+            }).join('');
+        }
+        function loadHistory() {
+            fetch('/api/strategy_stats?_='+Date.now()).then(r=>r.json()).then(d=>renderStrategyStats(d.strategy_stats)).catch(()=>{});
+            fetch('/api/trade_profit_stats?_='+Date.now()).then(r=>r.json()).then(d=>renderDaily(d.daily)).catch(()=>{});
+            fetch('/api/trade_history?_='+Date.now()).then(r=>r.json()).then(d=>renderHistory(d.trades)).catch(()=>{});
+        }
+        loadHistory();
+        setInterval(loadHistory, 30000);
 
         document.addEventListener('visibilitychange', function() {
             if (!document.hidden) {
