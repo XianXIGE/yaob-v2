@@ -926,6 +926,15 @@ def run_scan(user=None):
                         ratio = (entry - last) / entry * 100
                     tp = float(rec.get("tp_ratio", 0))
                     sl = float(rec.get("sl_ratio", 0))
+                    # 防御: 若历史记录未持久化 tp/sl(=0, 旧版bug), 按记录里的策略从 live 参数现取
+                    # 修复开仓时因大小写不匹配写入 0 导致止损失效的问题 (8/4)
+                    if (tp == 0 or sl == 0) and rec.get("strategy"):
+                        sk = str(rec.get("strategy", "")).lower()
+                        if sk in params:
+                            if tp == 0:
+                                tp = float(params[sk]["tp_ratio"])
+                            if sl == 0:
+                                sl = float(params[sk]["sl_ratio"])
                     qty = abs(amt)
                     if qty <= 0:
                         continue
@@ -992,10 +1001,11 @@ def run_scan(user=None):
                     avail -= open_margin  # 每开一单扣减保证金配额
                     # 记录该笔自动单，用于后续自动平仓(按策略 tp/sl)
                     now_s = time.strftime("%Y-%m-%d %H:%M:%S")
+                    sk = str(cand.get("strategy", "")).lower()
                     tor[sym0] = {
                         "strategy": cand.get("strategy", ""),
-                        "tp_ratio": float(params[cand.get("strategy", "")]["tp_ratio"]) if cand.get("strategy") in params else 0,
-                        "sl_ratio": float(params[cand.get("strategy", "")]["sl_ratio"]) if cand.get("strategy") in params else 0,
+                        "tp_ratio": float(params[sk]["tp_ratio"]) if sk in params else 0,
+                        "sl_ratio": float(params[sk]["sl_ratio"]) if sk in params else 0,
                         "entry_price": price, "open_time": now_s,
                         "qty": qty,
                     }
