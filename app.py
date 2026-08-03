@@ -130,8 +130,8 @@ class Store:
                   "tp_ratio": 60, "sl_ratio": -20},
             "e": {"peak_gain_threshold": 0.50, "retrace_target_gain": 0.10,
                   "vol_min": 1e7, "tp_ratio": 1200, "sl_ratio": -86},
-            "f": {"lookback_hours": 48, "fib_long": 0.382, "fib_short": 0.618,
-                  "tolerance_ratio": 0.005, "vol_min": 3e7, "tp_ratio": 10, "sl_ratio": -15},
+            "f": {"lookback_hours": 48, "fib_long": 0.786, "fib_short": 0.618,
+                  "tolerance_ratio": 0.1, "vol_min": 3e7, "tp_ratio": 10, "sl_ratio": -15},
         }
 
     def _default_stats(self):
