@@ -94,6 +94,31 @@ body{
 .btn-refresh:hover{ filter:brightness(1.05); color:#fff; }
 .pkg-wrap{ display:flex; flex-wrap:wrap; gap:.35rem; align-items:center; }
 .pkg-label{ font-size:.78rem; color:var(--muted); }
+
+/* ============ 管理后台响应式适配 ============ */
+@media (max-width: 991.98px) {
+  .navbar .container-fluid { flex-wrap: wrap; gap: 0.5rem; }
+}
+@media (max-width: 767.98px) {
+  body { font-size: .95rem; }
+  .navbar .container-fluid { flex-direction: column; align-items: flex-start; gap: .5rem; }
+  .navbar .container-fluid > div { flex-wrap: wrap; }
+  .navbar-brand { font-size: 1rem; }
+  .container { padding-left: .75rem; padding-right: .75rem; }
+  .toolbar-card { padding: .75rem .9rem; }
+  .toolbar-card h5 { font-size: 1rem; flex-wrap: wrap; }
+  .glass-card.table-holder { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .table thead th { font-size: .7rem; padding: .6rem .5rem; white-space: nowrap; }
+  .table tbody td { font-size: .78rem; padding: .55rem .5rem; }
+  .table { min-width: 720px; }
+  .pkg-wrap { flex-wrap: wrap; }
+  .btn { font-size: .72rem; padding: .28rem .5rem; white-space: nowrap; }
+}
+@media (max-width: 480px) {
+  .navbar .container-fluid > div { width: 100%; justify-content: space-between; }
+  .admin-chip { font-size: .72rem; }
+  .nav-link-soft { font-size: .78rem; }
+}
 </style>
 </head>
 <body>
@@ -121,7 +146,7 @@ body{
     </div>
   </div>
 
-  <div class="glass-card p-0 overflow-hidden">
+  <div class="glass-card table-holder p-0 overflow-hidden">
     <table class="table mb-0">
       <thead>
         <tr>

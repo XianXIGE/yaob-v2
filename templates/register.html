@@ -9,6 +9,11 @@
  body { background: linear-gradient(135deg, #0f172a, #1e293b); height: 100vh; display: flex; align-items: center; justify-content: center; }
  .reg-box { background: rgba(255,255,255,0.05); backdrop-filter: blur(6px); border: 1px solid rgba(255,255,255,0.15); border-radius: 1.25rem; padding: 2.5rem; width: 100%; max-width: 380px; }
  .reg-box h1 { color: #fff; font-size: 1.5rem; font-weight: 700; }
+ @media (max-width: 420px) {
+   body { padding: 1rem; }
+   .reg-box { padding: 1.75rem 1.25rem; max-width: 100%; border-radius: 1rem; }
+   .reg-box h1 { font-size: 1.25rem; }
+ }
 </style>
 </head>
 <body>
