@@ -916,13 +916,19 @@ def run_scan(user=None):
                     except Exception:
                         pass
                     amt = float(pos.get("positionAmt", 0))
-                    if entry <= 0:
-                        mg = float(pos.get("initialMargin", 0))
-                        pnl = float(pos.get("unrealizedProfit", 0))
-                        ratio = pnl / mg * 100 if mg else 0
-                    elif amt > 0:  # 多头
+                    # 盈亏口径统一用保证金口径=未实现盈亏/初始保证金(即对本金的真实盈亏率),
+                    # 与策略 sl_ratio/tp_ratio(-15等) 同口径。
+                    # 修正: 旧逻辑用裸价格涨跌幅, 忽略杠杆(如5x下价格-4.65%实为保证金-23%),
+                    #      导致价格层面永达不到 -15% 止损线而止损失效。
+                    mg = float(pos.get("initialMargin", 0))
+                    pnl = float(pos.get("unrealizedProfit", 0))
+                    if mg:
+                        ratio = pnl / mg * 100
+                    elif entry <= 0:
+                        ratio = 0.0
+                    elif amt > 0:  # 多头兜底(无保证金时)
                         ratio = (last - entry) / entry * 100
-                    else:  # 空头
+                    else:  # 空头兜底
                         ratio = (entry - last) / entry * 100
                     tp = float(rec.get("tp_ratio", 0))
                     sl = float(rec.get("sl_ratio", 0))
