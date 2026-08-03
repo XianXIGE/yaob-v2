@@ -1,0 +1,21 @@
+# ===== 敏感数据 — 绝不入库 =====
+# 运行时数据（含用户密码哈希、VIP、API key 等）
+data/
+data/**/*.json
+*.db
+
+# ===== Python =====
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# ===== 日志 =====
+*.log
+nohup.out
+
+# ===== 系统/编辑器 =====
+.DS_Store
+.idea/
+.vscode/

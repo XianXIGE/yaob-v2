@@ -1,0 +1,1314 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>妖币雷达交易系统 V2.0</title>
+    <meta charset="utf-8">
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background: linear-gradient(135deg, #f5f7fa 0%, #e9edf2 100%); font-family: 'Segoe UI', system-ui, sans-serif; }
+        .card-modern { background: rgba(255,255,255,0.92); backdrop-filter: blur(2px); border: none; border-radius: 1.25rem; box-shadow: 0 8px 20px rgba(0,0,0,0.05); }
+        .status-card { background: white; border-radius: 1.25rem; padding: 1rem 0.5rem; text-align: center; height: 110px; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.04); }
+        .status-card i { font-size: 1.8rem; margin-bottom: 0.5rem; color: #0d6efd; }
+        .status-card .status-value { font-size: 1.5rem; font-weight: 700; }
+        .table-custom { background-color: white; border-radius: 1rem; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.04); }
+        .table-custom thead th { background-color: #f8f9fc; border-bottom: 2px solid #e9ecef; font-weight: 600; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.3px; color: #495057; padding: 0.9rem 0.75rem; }
+        .table-custom tbody td { vertical-align: middle; padding: 0.7rem 0.75rem; font-size: 0.9rem; border-bottom: 1px solid #f0f2f5; }
+        .table-custom tbody tr { transition: all 0.2s ease; }
+        .table-custom tbody tr:hover {
+            background-color: #f8f9fe !important;
+            transform: scale(1.02);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            position: relative;
+            z-index: 2;
+        }
+        .badge-direction { padding: 0.4rem 0.7rem; border-radius: 2rem; font-weight: 600; font-size: 0.75rem; }
+        .btn-soft { border-radius: 2rem; padding: 0.4rem 1.2rem; font-weight: 500; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: none; }
+        .btn-soft:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.15); }
+        .btn-outline-light-soft { background-color: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3); }
+        .btn-outline-light-soft:hover { background-color: white; color: #0f172a; border-color: white; }
+        .navbar-custom { background: linear-gradient(105deg, #0f172a 0%, #1e293b 100%); border-radius: 1.25rem; padding: 0.75rem 1.5rem; margin-bottom: 1.5rem; }
+        .footer-note { text-align: center; font-size: 0.75rem; color: #6c757d; margin-top: 2rem; border-top: 1px solid rgba(0,0,0,0.05); padding-top: 1.5rem; }
+        .param-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0.75rem; }
+        .param-row .form-group { flex: 1; min-width: 120px; }
+        .param-row .form-group label { font-size: 0.75rem; font-weight: 600; color: #4b5563; }
+        .param-row .form-group input { font-size: 0.9rem; padding: 0.4rem 0.6rem; border-radius: 0.75rem; border: 1px solid #e2e8f0; }
+        .strategy-row { margin-top: 1rem; padding-top: 0.5rem; border-top: 1px solid #e2e8f0; display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+        .strategy-label { font-size: 0.85rem; font-weight: 500; color: #4b5563; white-space: nowrap; }
+        .strategy-buttons { display: flex; flex: 1; flex-wrap: wrap; gap: 0.5rem; min-width: 0; }
+        .strategy-btn { flex: 1 1 0%; min-width: 70px; padding: 0.35rem 0.2rem; font-size: 0.78rem; white-space: nowrap; text-align: center; border-radius: 0.75rem; font-weight: 600; transition: all 0.2s; border: none; }
+        .strategy-btn.btn-success { background-color: #28a745; color: white; }
+        .strategy-btn.btn-danger { background-color: #dc3545; color: white; }
+        .strategy-btn.btn-secondary { background-color: #6c757d; color: white; opacity: 0.6; cursor: not-allowed; }
+        .strategy-btn.btn-secondary:hover { transform: none; box-shadow: none; }
+        .strategy-btn .vip-badge { font-size: 0.65rem; background: #ffc107; color: #212529; border-radius: 0.5rem; padding: 0.1rem 0.4rem; margin-left: 0.2rem; }
+        .strategy-btn:hover { transform: scale(1.02); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .badge-purple-gold {
+            background-color: #6a1b9a;
+            color: #ffd700;
+            padding: 0.35rem 0.65rem;
+            border-radius: 2rem;
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-decoration: none;
+            display: inline-block;
+            cursor: pointer;
+        }
+        .badge-purple-gold:hover {
+            background-color: #4a148c;
+            color: #ffea00;
+        }
+        .custom-modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1050; justify-content: center; align-items: center; }
+        .custom-modal-overlay.show { display: flex; }
+        .custom-modal {
+            background: white;
+            border-radius: 1.25rem;
+            padding: 2rem;
+            max-width: 800px;
+            width: 95%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            position: relative;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .custom-modal .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 1.8rem;
+            cursor: pointer;
+            background: none;
+            border: none;
+            z-index: 1060;
+            color: #333;
+        }
+        .custom-modal .modal-close:hover {
+            color: #000;
+        }
+        .custom-modal .modal-title { font-weight: 700; margin-bottom: 1.5rem; }
+        .custom-modal .form-label { font-weight: 600; font-size: 0.85rem; }
+        .custom-modal .form-control { border-radius: 0.75rem; }
+        .custom-modal .modal-footer { margin-top: 1.5rem; display: flex; gap: 0.5rem; justify-content: flex-end; }
+        .param-group { border-bottom: 1px solid #e9ecef; padding-bottom: 1rem; margin-bottom: 1rem; }
+        .param-group h6 { font-weight: 600; color: #0d6efd; }
+        .param-group .row { margin-bottom: 0.5rem; }
+        .toggle-btn {
+            min-width: 120px;
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 1.5rem;
+            transition: all 0.2s;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+        }
+        .toggle-btn:hover { transform: scale(1.03); }
+        .toggle-btn.btn-success { background-color: #28a745; color: white; }
+        .toggle-btn.btn-danger { background-color: #dc3545; color: white; }
+        .toggle-btn.btn-primary { background-color: #0d6efd; color: white; }
+        .toggle-btn.btn-secondary { background-color: #6c757d; color: white; }
+        .toggle-btn.btn-warning { background-color: #ffc107; color: #212529; }
+        .top-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; }
+        .stat-item {
+            background: linear-gradient(145deg, #ffffff, #f0f4f8);
+            border-radius: 1.25rem;
+            padding: 0.8rem 0.5rem;
+            text-align: center;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.8);
+            border: 1px solid rgba(255,255,255,0.5);
+            transition: all 0.2s ease;
+        }
+        .stat-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 32px rgba(0,0,0,0.12);
+        }
+        .stat-item .number {
+            font-size: 2rem;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+        .stat-item .number.text-primary { color: #0d6efd !important; }
+        .stat-item .number.text-success { color: #198754 !important; }
+        .stat-item .number.text-warning { color: #ffc107 !important; }
+        .stat-item .number.text-danger { color: #dc3545 !important; }
+        .stat-item small {
+            font-size: 0.75rem;
+            color: #6c757d;
+            font-weight: 500;
+            letter-spacing: 0.3px;
+        }
+        .btn-reset-stats .btn-text { display: none; }
+        .btn-reset-stats:hover .btn-text { display: inline; }
+        @media (max-width: 768px) {
+            .status-card { height: auto; margin-bottom: 0.75rem; }
+            .param-row .form-group { min-width: 100%; flex: 0 0 100%; }
+            .param-row .form-group .btn { width: 100%; }
+            .strategy-row { flex-direction: column; align-items: stretch; }
+            .strategy-buttons { flex: 1 1 auto; }
+            .strategy-btn { flex: 1 0 calc(33.33% - 0.4rem); font-size: 0.7rem; padding: 0.3rem 0.2rem; }
+            .stat-item .number { font-size: 1.5rem; }
+            .top-controls { flex-direction: column; align-items: stretch; }
+            .toggle-btn { min-width: 100%; }
+            .custom-modal { padding: 1.5rem; }
+        }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .nav-auto-btn { margin: 0 0.5rem; }
+        .excluded-item {
+            display: inline-block;
+            background: #f1f3f5;
+            padding: 0.3rem 0.8rem;
+            border-radius: 2rem;
+            margin: 0.2rem 0.3rem;
+            font-size: 0.85rem;
+            border: 1px solid #dee2e6;
+        }
+        .excluded-item .remove-symbol {
+            margin-left: 0.5rem;
+            cursor: pointer;
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .excluded-item .remove-symbol:hover { color: #a71d2a; }
+        .section-title { font-weight: 600; font-size: 1.1rem; margin-top: 0.5rem; margin-bottom: 0.5rem; }
+        .copyable-symbol { cursor: pointer; }
+        .copyable-symbol:hover { text-decoration: underline; color: #0d6efd; }
+        #toastMsg {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            color: #fff;
+            padding: 8px 24px;
+            border-radius: 30px;
+            font-size: 14px;
+            z-index: 9999;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        #toastMsg.show { opacity: 1; }
+        .badge-blue {
+            background-color: #0d6efd;
+            color: white;
+            padding: 0.35rem 0.65rem;
+            border-radius: 2rem;
+            font-weight: 600;
+            font-size: 0.75rem;
+            display: inline-block;
+        }
+        .vip-expiry-text {
+            font-size: 0.65rem;
+            color: #a0aec0;
+            margin-left: 0.3rem;
+        }
+        .badge-vip-gold {
+            background-color: #ffc107;
+            color: #212529;
+            padding: 0.35rem 0.65rem;
+            border-radius: 2rem;
+            font-weight: 600;
+            font-size: 0.75rem;
+        }
+    </style>
+</head>
+<body class="bg-light">
+<div class="container my-4" style="max-width: 1400px;">
+    <div class="navbar-custom d-flex flex-wrap justify-content-between align-items-center">
+        <div>
+            <i class="fas fa-chart-line me-2 text-warning"></i>
+            <span class="fw-bold fs-4 text-white">妖币自动交易系统</span>
+            <span class="badge bg-warning text-dark ms-2">V2.0</span>
+        </div>
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <span class="text-white me-1">
+                <i class="fas fa-user"></i> <span id="usernameDisplay">{{ username }}</span>
+                <span id="vipBadge">
+                    
+                        <span class="badge bg-secondary ms-1">非会员</span>
+                    
+                </span>
+                <span id="vipExpiryDisplay" class="vip-expiry-text"></span>
+                
+            </span>
+            <button id="autoTradeBtn" class="toggle-btn btn-danger nav-auto-btn" onclick="toggleAutoTrade()">程序开关 关</button>
+            <button class="btn btn-outline-light-soft btn-soft" onclick="openApiModal()">
+                <i class="fas fa-key"></i> <span id="api_btn_text">填充密钥</span>
+            </button>
+            {% if is_admin %}
+            <a href="/admin" class="btn btn-warning btn-soft"><i class="fas fa-crown"></i> 后台</a>
+            {% endif %}
+            <a href="/logout" class="btn btn-outline-light-soft btn-soft"><i class="fas fa-sign-out-alt"></i> 退出</a>
+        </div>
+    </div>
+
+    <div class="row g-3 my-4 text-center">
+        <div class="col-md-4 col-sm-6"><div class="status-card"><i class="fas fa-satellite-dish"></i><h6 class="text-secondary mb-1">扫描器动态</h6><p class="status-value text-info mb-0" id="scanner_status">⏳ 加载中...</p></div></div>
+        <div class="col-md-4 col-sm-6"><div class="status-card"><i class="fas fa-coins"></i><h6 class="text-secondary mb-1">合约总资产</h6><p class="status-value text-success" id="total_assets">-</p></div></div>
+        <div class="col-md-4 col-sm-6"><div class="status-card"><i class="fas fa-hand-holding-usd"></i><h6 class="text-secondary mb-1">可用保证金</h6><p class="status-value text-danger" id="available_margin">-</p></div></div>
+    </div>
+
+    <div class="row g-3 stat-cards mb-4">
+        <div class="col-6 col-md-3"><div class="stat-item"><div class="number text-primary" id="stat_total_trades">0</div><small>总交易</small></div></div>
+        <div class="col-6 col-md-3"><div class="stat-item"><div class="number text-success" id="stat_win_trades">0</div><small>盈利次数</small></div></div>
+        <div class="col-6 col-md-3"><div class="stat-item"><div class="number text-warning" id="stat_win_rate">0%</div><small>胜率</small></div></div>
+        <div class="col-6 col-md-3"><div class="stat-item"><div class="number text-danger" id="stat_total_pnl">0.00</div><small>总盈亏 (U)</small></div></div>
+    </div>
+
+    <div class="card card-modern p-3 mb-4">
+        <h5 class="mb-3"><i class="fas fa-sliders-h text-primary me-2"></i>参数实时调节面板</h5>
+        <div class="param-row">
+            <div class="form-group"><label>开仓保证金 (U)</label><input type="number" class="form-control" id="input_margin" step="0.5" min="1" oninput="markDirty()" autocomplete="off"></div>
+            <div class="form-group"><label>杠杆倍数 (1-6X)</label><input type="number" class="form-control" id="input_leverage" step="1" min="1" max="6" oninput="markDirty()" autocomplete="off"></div>
+            <div class="form-group"><button class="btn btn-primary w-100 fw-bold" id="save_btn" onclick="saveParams()">保存参数</button></div>
+            <div class="form-group d-flex flex-wrap align-items-center gap-2">
+                <button class="btn btn-outline-light-soft btn-soft" onclick="testAlert()"><i class="fas fa-bell"></i> 测试告警</button>
+                <button class="btn btn-outline-danger btn-soft btn-reset-stats" onclick="resetStats()">
+                    <i class="fas fa-trash"></i> <span class="btn-text">重置统计</span>
+                </button>
+            </div>
+        </div>
+        <div class="row mt-2 align-items-center">
+            <div class="col-md-8 top-controls">
+                <button id="marginModeBtn" class="toggle-btn btn-primary" onclick="toggleMarginMode()">逐仓模式</button>
+                <button id="excludeLargeCapBtn" class="toggle-btn btn-warning" onclick="toggleExcludeLargeCap()">大市值忽略 开</button>
+                <button class="btn btn-outline-danger btn-soft" onclick="openExcludedModal()"><i class="fas fa-ban"></i> 大市值币/股指表</button>
+            </div>
+            <div class="col-md-4 text-md-end top-controls">
+                <button class="btn btn-sm btn-outline-primary" onclick="openStrategyParams()"><i class="fas fa-cog"></i> 策略参数配置</button>
+            </div>
+        </div>
+        <div class="strategy-row">
+            <span class="strategy-label"><i class="fas fa-toggle-on"></i> 策略独立开关：</span>
+            <div class="strategy-buttons">
+                <button id="btn_strategy_a" class="btn strategy-btn btn-success">策略A(空)</button>
+                <button id="btn_strategy_b" class="btn strategy-btn btn-success">策略B(空)</button>
+                <button id="btn_strategy_c" class="btn strategy-btn btn-success">策略C(多)</button>
+                <button id="btn_strategy_d" class="btn strategy-btn btn-success">策略D(空)</button>
+                <button id="btn_strategy_e" class="btn strategy-btn btn-success">策略E(多)</button>
+                <button id="btn_strategy_f" class="btn strategy-btn btn-success">策略F(斐波那契)</button>
+            </div>
+        </div>
+        <div class="small text-muted mt-2">
+            点击按钮可单独开启/关闭对应策略，状态自动保存
+        </div>
+    </div>
+
+    <h5 class="fw-bold text-dark mb-2"><i class="fas fa-search-dollar text-info me-2"></i>排序候选表</h5>
+    <div class="table-responsive mb-4">
+        <table class="table table-custom table-hover align-middle" style="max-height: 250px;">
+            <thead class="table-light">
+                <tr>
+                    <th>币种</th>
+                    <th>触发原因</th>
+                    <th>方向</th>
+                    <th>未开仓原因</th>
+                    <th>实时市价</th>
+                    <th>达到预值</th>
+                    <th>优先级</th>
+                </tr>
+            </thead>
+            <tbody id="candidate_table"></tbody>
+        </table>
+    </div>
+
+    <h5 class="fw-bold text-dark mb-2 d-flex flex-wrap align-items-center gap-3">
+        <span><i class="fas fa-fire text-danger me-2"></i>当前活跃持仓列表</span>
+    </h5>
+    <div class="table-responsive mb-4">
+        <table class="table table-custom table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>币种</th>
+                    <th>触发原因</th>
+                    <th>方向</th>
+                    <th>开仓时间</th>
+                    <th>实时市价</th>
+                    <th>持仓数量</th>
+                    <th>持仓保证金</th>
+                    <th>杠杆倍数</th>
+                    <th>未实现盈亏</th>
+                    <th>实时盈亏比</th>
+                </tr>
+            </thead>
+            <tbody id="position_table"></tbody>
+        </table>
+    </div>
+
+    <div class="footer-note">
+        <i class="fas fa-shield-alt me-1 text-secondary"></i> 各策略止盈止损比例可独立配置 &nbsp;&nbsp;|&nbsp;&nbsp;
+        <i class="fas fa-clock me-1 text-secondary"></i> 数据每1秒自动刷新 &nbsp;&nbsp;|&nbsp;&nbsp;
+        <span id="last_update">最后更新：--:--:--</span>
+    </div>
+</div>
+
+<!-- Toast 提示 -->
+<div id="toastMsg"></div>
+
+<!-- API Modal -->
+<div id="apiModalOverlay" class="custom-modal-overlay">
+    <div class="custom-modal">
+        <button class="modal-close" onclick="closeApiModal()">&times;</button>
+        <h5 class="modal-title"><i class="fas fa-key text-warning me-2"></i>币安API密钥设置</h5>
+        <div class="mb-3"><label class="form-label">API Key</label><input type="password" class="form-control" id="modal_api_key" placeholder="请输入API Key" autocomplete="off"></div>
+        <div class="mb-3"><label class="form-label">Secret Key</label><input type="password" class="form-control" id="modal_api_secret" placeholder="请输入Secret Key" autocomplete="off"></div>
+        <div class="mb-3"><button class="btn btn-outline-secondary" onclick="toggleModalVisibility()">显示/隐藏</button></div>
+        <div id="modal_api_status" class="small"></div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeApiModal()">取消</button>
+            <button class="btn btn-danger" onclick="clearApiKeys()">清除密钥</button>
+            <button class="btn btn-primary" onclick="saveModalApiKeys()">保存密钥</button>
+        </div>
+    </div>
+</div>
+
+<!-- 策略参数 Modal -->
+<div id="strategyParamsModal" class="custom-modal-overlay">
+    <div class="custom-modal">
+        <button class="modal-close" onclick="closeStrategyParams()">&times;</button>
+        <h5 class="modal-title"><i class="fas fa-sliders-h text-primary me-2"></i>策略参数配置</h5>
+        <form id="strategyParamsForm">
+            <div class="param-group">
+                <h6>策略A (做空) <small class="text-muted">过去N天内涨幅在[下限%,上限%]区间</small></h6>
+                <div class="row g-2">
+                    <div class="col-6 col-md-3"><label class="form-label small">回看天数</label><input type="number" step="1" class="form-control form-control-sm" name="a_lookback_days" value="3"></div>
+                    <div class="col-6 col-md-3"><label class="form-label small">涨幅下限 (%)</label><input type="number" step="0.5" class="form-control form-control-sm" name="a_gain_min" value="30"></div>
+                    <div class="col-6 col-md-3"><label class="form-label small">涨幅上限 (%)</label><input type="number" step="0.5" class="form-control form-control-sm" name="a_gain_max" value="60"></div>
+                    <div class="col-6 col-md-3"><label class="form-label small">24h成交额下限 (亿)</label><input type="number" step="0.1" class="form-control form-control-sm" name="a_vol_min" value="0.1"></div>
+                    <div class="col-6 col-md-3"><label class="form-label small">止盈%</label><input type="number" step="1" class="form-control form-control-sm" name="a_tp_ratio" value="180"></div>
+                    <div class="col-6 col-md-3"><label class="form-label small">止损%</label><input type="number" step="1" class="form-control form-control-sm" name="a_sl_ratio" value="-86"></div>
+                </div>
+            </div>
+            <div class="param-group">
+                <h6>策略B (做空) <small class="text-muted">当日涨幅 ≥ N%</small></h6>
+                <div class="row g-2">
+                    <div class="col-6 col-md-3"><label class="form-label small">涨幅阈值 (%)</label><input type="number" step="0.5" class="form-control form-control-sm" name="b_gain_threshold" value="30"></div>
+                    <div class="col-6 col-md-3"><label class="form-label small">24h成交额下限 (亿)</label><input type="number" step="0.1" class="form-control form-control-sm" name="b_vol_min" value="0.1"></div>
+                    <div class="col-6 col-md-3"><label class="form-label small">止盈%</label><input type="number" step="1" class="form-control form-control-sm" name="b_tp_ratio" value="90"></div>
+                    <div class="col-6 col-md-3"><label class="form-label small">止损%</label><input type="number" step="1" class="form-control form-control-sm" name="b_sl_ratio" value="-86"></div>
+                </div>
+            </div>
+            <div class="param-group">
+                <h6>策略C (做多) <small class="text-muted">N天内最高价下跌M%</small></h6>
+                <div class="row g-2">
+                    <div class="col-6 col-md-3"><label class="form-label small">回看天数</label><input type="number" step="1" class="form-control form-control-sm" name="c_lookback_days" value="3"></div>
+                    <div class="col-6 col-md-3"><label class="form-label small">下跌阈值 (%)</label><input type="number" step="0.5" class="form-control form-control-sm" name="c_drop_threshold" value="20"></div>
+                    <div class="col-6 col-md-3"><label class="form-label small">24h成交额下限 (亿)</label><input type="number" step="0.1" class="form-control form-control-sm" name="c_vol_min" value="0.1"></div>
+                    <div class="col-6 col-md-3"><label class="form-label small">止盈%</label><input type="number" step="1" class="form-control form-control-sm" name="c_tp_ratio" value="210"></div>
+                    <div class="col-6 col-md-3"><label class="form-label small">止损%</label><input type="number" step="1" class="form-control form-control-sm" name="c_sl_ratio" value="-86"></div>
+                </div>
+            </div>
+            <div class="param-group">
+                <h6>策略D (做空) <small class="text-muted">在 N 分钟内涨幅达到 N%</small></h6>
+                <div class="row g-2">
+                    <div class="col-6 col-md-3"><label class="form-label small">时间窗口 (分钟)</label><input type="number" step="1" class="form-control form-control-sm" name="d_window_minutes" value="5"></div>
+                    <div class="col-6 col-md-3"><label class="form-label small">涨幅阈值 (%)</label><input type="number" step="0.5" class="form-control form-control-sm" name="d_gain_threshold" value="5"></div>
+                    <div class="col-6 col-md-3"><label class="form-label small">24h成交额下限 (亿)</label><input type="number" step="0.1" class="form-control form-control-sm" name="d_vol_min" value="0.1"></div>
+                    <div class="col-6 col-md-3"><label class="form-label small">止盈%</label><input type="number" step="1" class="form-control form-control-sm" name="d_tp_ratio" value="60"></div>
+                    <div class="col-6 col-md-3"><label class="form-label small">止损%</label><input type="number" step="1" class="form-control form-control-sm" name="d_sl_ratio" value="-20"></div>
+                </div>
+            </div>
+            <div class="param-group">
+                <h6>策略E (做多) <small class="text-muted">最高涨幅达N%后，回落至当日涨幅M%时买入</small></h6>
+                <div class="row g-2">
+                    <div class="col-6 col-md-3"><label class="form-label small">最高涨幅阈值 (%)</label><input type="number" step="1" class="form-control form-control-sm" name="e_peak_gain_threshold" value="50"></div>
+                    <div class="col-6 col-md-3"><label class="form-label small">回落目标涨幅 (%)</label><input type="number" step="0.5" class="form-control form-control-sm" name="e_retrace_target_gain" value="10"></div>
+                    <div class="col-6 col-md-3"><label class="form-label small">24h成交额下限 (亿)</label><input type="number" step="0.1" class="form-control form-control-sm" name="e_vol_min" value="0.1"></div>
+                    <div class="col-6 col-md-3"><label class="form-label small">止盈%</label><input type="number" step="1" class="form-control form-control-sm" name="e_tp_ratio" value="1200"></div>
+                    <div class="col-6 col-md-3"><label class="form-label small">止损%</label><input type="number" step="1" class="form-control form-control-sm" name="e_sl_ratio" value="-86"></div>
+                </div>
+            </div>
+            <div class="param-group">
+                <h6>策略F (斐波那契双向) <small class="text-muted">回撤至支撑位做多，反弹至阻力位做空</small></h6>
+                <div class="row g-2">
+                    <div class="col-6 col-md-3"><label class="form-label small">回看小时数</label><input type="number" step="1" class="form-control form-control-sm" name="f_lookback_hours" value="48"></div>
+                    <div class="col-6 col-md-3"><label class="form-label small">做多回撤位 (0.382~0.786)</label><input type="number" step="0.01" class="form-control form-control-sm" name="f_fib_long" value="0.618"></div>
+                    <div class="col-6 col-md-3"><label class="form-label small">做空反弹位 (0.236~0.5)</label><input type="number" step="0.01" class="form-control form-control-sm" name="f_fib_short" value="0.382"></div>
+                    <div class="col-6 col-md-3"><label class="form-label small">触及容差 (%)</label><input type="number" step="0.1" class="form-control form-control-sm" name="f_tolerance_ratio" value="0.5"></div>
+                    <div class="col-6 col-md-3"><label class="form-label small">24h成交额下限 (亿)</label><input type="number" step="0.1" class="form-control form-control-sm" name="f_vol_min" value="0.1"></div>
+                    <div class="col-6 col-md-3"><label class="form-label small">止盈%</label><input type="number" step="1" class="form-control form-control-sm" name="f_tp_ratio" value="120"></div>
+                    <div class="col-6 col-md-3"><label class="form-label small">止损%</label><input type="number" step="1" class="form-control form-control-sm" name="f_sl_ratio" value="-86"></div>
+                </div>
+            </div>
+        </form>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeStrategyParams()">取消</button>
+            <button class="btn btn-primary" onclick="saveStrategyParams()">保存策略参数</button>
+        </div>
+        <div id="strategyParamsStatus" class="small text-center mt-2"></div>
+    </div>
+</div>
+
+<!-- 大市值币/股指表 Modal -->
+<div id="excludedModal" class="custom-modal-overlay">
+    <div class="custom-modal">
+        <button class="modal-close" onclick="closeExcludedModal()">&times;</button>
+        <h5 class="modal-title"><i class="fas fa-ban text-danger me-2"></i>大市值币/股指表</h5>
+        <div class="section-title"><i class="fas fa-coins text-primary me-1"></i>币种市值排序</div>
+        <div id="excludedCryptoList" class="d-flex flex-wrap gap-1" style="min-height: 40px; margin-bottom: 1rem;"></div>
+        <div class="section-title"><i class="fas fa-chart-line text-success me-1"></i>股指市值排序</div>
+        <div id="excludedIndexList" class="d-flex flex-wrap gap-1" style="min-height: 40px; margin-bottom: 1rem;"></div>
+        <hr>
+        <div class="mb-3">
+            <label class="form-label">添加新币种（用逗号分隔，例如：BTC/USDT, ETH/USDT, AAPL）</label>
+            <div class="input-group">
+                <input type="text" class="form-control" id="newExcludedInput" placeholder="输入币种，多个用逗号分隔">
+                <button class="btn btn-primary" onclick="addExcludedSymbols()">添加</button>
+            </div>
+            <div id="addExcludedStatus" class="small mt-1"></div>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <button class="btn btn-outline-danger" onclick="clearAllExcluded()">清空所有</button>
+            <button class="btn btn-outline-success" onclick="restoreDefaultExcluded()">恢复默认大盘币</button>
+            <button class="btn btn-secondary" onclick="closeExcludedModal()">关闭</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ---------- 全局变量 ----------
+    let isDirty = false;
+    let targetNextScanTimestamp = 0;
+    let validTimestamp = false;
+    let scanStartTimestamp = 0;
+    let saveCooldown = false;
+    let strategyStates = {a: true, b: true, c: true, d: true, e: true, f: true};
+    let autoTradeEnabled = false;
+    let marginMode = 'isolated';
+    let excludeLargeCap = true;
+    let isFetching = false;
+    let dashboardInterval = null;
+    let isVip = false;
+    let strategyInitialized = false;
+
+    function $(id) { return document.getElementById(id); }
+
+    function markDirty() {
+        isDirty = true;
+        var btn = $('save_btn');
+        if (btn) btn.innerText = "⚠️ 保存";
+    }
+
+    // ========== 复制功能 ==========
+    function copySymbol(symbol) {
+        navigator.clipboard.writeText(symbol).then(() => {
+            showToast(`已复制: ${symbol}`);
+        }).catch(err => {
+            const textarea = document.createElement('textarea');
+            textarea.value = symbol;
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                showToast(`已复制: ${symbol}`);
+            } catch (e) {
+                alert('复制失败，请手动复制');
+            }
+            document.body.removeChild(textarea);
+        });
+    }
+
+    function showToast(msg) {
+        const toast = document.getElementById('toastMsg');
+        toast.textContent = msg;
+        toast.classList.add('show');
+        clearTimeout(toast._timer);
+        toast._timer = setTimeout(() => {
+            toast.classList.remove('show');
+        }, 1500);
+    }
+
+    // ---------- API 密钥 ----------
+    function openApiModal() {
+        $('modal_api_key').value = '';
+        $('modal_api_secret').value = '';
+        $('modal_api_status').innerHTML = '';
+        $('apiModalOverlay').classList.add('show');
+    }
+    function closeApiModal() { $('apiModalOverlay').classList.remove('show'); }
+    function toggleModalVisibility() {
+        var key = $('modal_api_key'), secret = $('modal_api_secret');
+        if (key && secret) {
+            if (key.type === 'password') { key.type = 'text'; secret.type = 'text'; } else { key.type = 'password'; secret.type = 'password'; }
+        }
+    }
+    function saveModalApiKeys() {
+        var apiKey = $('modal_api_key').value.trim();
+        var apiSecret = $('modal_api_secret').value.trim();
+        if (!apiKey || !apiSecret) { $('modal_api_status').innerHTML = '<span class="text-danger">请完整填写API Key和Secret</span>'; return; }
+        $('modal_api_status').innerHTML = '<span class="text-info">验证中...</span>';
+        fetch('/api/set_api_keys', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({api_key: apiKey, api_secret: apiSecret}) })
+        .then(res => res.json()).then(data => {
+            if (data.status === 'success') {
+                $('modal_api_status').innerHTML = '<span class="text-success">✅ 保存成功</span>';
+                $('api_btn_text').innerText = '填充密钥';
+                fetchDashboard();
+                setTimeout(() => { closeApiModal(); }, 800);
+            } else { $('modal_api_status').innerHTML = '<span class="text-danger">❌ ' + data.msg + '</span>'; }
+        }).catch(err => { $('modal_api_status').innerHTML = '<span class="text-danger">请求失败: ' + err + '</span>'; });
+    }
+    function clearApiKeys() {
+        if (!confirm('确定要清除当前账户的API密钥吗？清除后将无法进行交易和扫描。')) return;
+        fetch('/api/clear_api_keys', { method: 'POST', headers: {'Content-Type': 'application/json'} })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert('✅ API密钥已清除');
+                $('api_btn_text').innerText = '填充密钥';
+                closeApiModal();
+                fetchDashboard();
+            } else {
+                alert('❌ 清除失败: ' + data.msg);
+            }
+        })
+        .catch(err => {
+            alert('❌ 请求失败: ' + err.message);
+        });
+    }
+    $('apiModalOverlay').addEventListener('click', function(e) { if (e.target === this) closeApiModal(); });
+
+    // ---------- 策略参数 ----------
+    function openStrategyParams() {
+        fetch('/api/get_strategy_params?_=' + Date.now())
+            .then(res => res.json())
+            .then(params => {
+                const a = params.a || {};
+                setInputVal('a_lookback_days', a.lookback_days || 3);
+                setInputVal('a_gain_min', a.gain_min !== undefined ? a.gain_min * 100 : 30);
+                setInputVal('a_gain_max', a.gain_max !== undefined ? a.gain_max * 100 : 60);
+                setInputVal('a_vol_min', a.vol_min ? a.vol_min / 1e8 : 0.1);
+                setInputVal('a_tp_ratio', a.tp_ratio || 180);
+                setInputVal('a_sl_ratio', a.sl_ratio || -86);
+
+                const b = params.b || {};
+                setInputVal('b_gain_threshold', b.gain_threshold !== undefined ? b.gain_threshold * 100 : 30);
+                setInputVal('b_vol_min', b.vol_min ? b.vol_min / 1e8 : 0.1);
+                setInputVal('b_tp_ratio', b.tp_ratio || 90);
+                setInputVal('b_sl_ratio', b.sl_ratio || -86);
+
+                const c = params.c || {};
+                setInputVal('c_lookback_days', c.lookback_days || 3);
+                setInputVal('c_drop_threshold', c.drop_threshold !== undefined ? c.drop_threshold * 100 : 20);
+                setInputVal('c_vol_min', c.vol_min ? c.vol_min / 1e8 : 0.1);
+                setInputVal('c_tp_ratio', c.tp_ratio || 210);
+                setInputVal('c_sl_ratio', c.sl_ratio || -86);
+
+                const d = params.d || {};
+                setInputVal('d_window_minutes', d.window_minutes || 5);
+                setInputVal('d_gain_threshold', d.gain_threshold !== undefined ? d.gain_threshold * 100 : 5);
+                setInputVal('d_vol_min', d.vol_min ? d.vol_min / 1e8 : 0.1);
+                setInputVal('d_tp_ratio', d.tp_ratio || 60);
+                setInputVal('d_sl_ratio', d.sl_ratio || -20);
+
+                const e = params.e || {};
+                setInputVal('e_peak_gain_threshold', e.peak_gain_threshold !== undefined ? e.peak_gain_threshold * 100 : 50);
+                setInputVal('e_retrace_target_gain', e.retrace_target_gain !== undefined ? e.retrace_target_gain * 100 : 10);
+                setInputVal('e_vol_min', e.vol_min ? e.vol_min / 1e8 : 0.1);
+                setInputVal('e_tp_ratio', e.tp_ratio || 1200);
+                setInputVal('e_sl_ratio', e.sl_ratio || -86);
+
+                const f = params.f || {};
+                setInputVal('f_lookback_hours', f.lookback_hours || 48);
+                setInputVal('f_fib_long', f.fib_long !== undefined ? f.fib_long : 0.618);
+                setInputVal('f_fib_short', f.fib_short !== undefined ? f.fib_short : 0.382);
+                setInputVal('f_tolerance_ratio', f.tolerance_ratio !== undefined ? f.tolerance_ratio * 100 : 0.5);
+                setInputVal('f_vol_min', f.vol_min ? f.vol_min / 1e8 : 0.1);
+                setInputVal('f_tp_ratio', f.tp_ratio || 120);
+                setInputVal('f_sl_ratio', f.sl_ratio || -86);
+
+                $('strategyParamsModal').classList.add('show');
+            })
+            .catch(console.error);
+    }
+    function setInputVal(name, val) {
+        const el = document.querySelector(`[name="${name}"]`);
+        if (el) el.value = val;
+    }
+    function closeStrategyParams() {
+        $('strategyParamsModal').classList.remove('show');
+        $('strategyParamsStatus').innerHTML = '';
+    }
+    function saveStrategyParams() {
+        const form = $('strategyParamsForm');
+        if (!form) return;
+        const inputs = form.querySelectorAll('input');
+        const data = {};
+        inputs.forEach(inp => {
+            const name = inp.name;
+            let val = parseFloat(inp.value);
+            if (!isNaN(val)) {
+                data[name] = val;
+            }
+        });
+
+        const strategyParams = {
+            a: {
+                lookback_days: data.a_lookback_days || 3,
+                gain_min: (data.a_gain_min || 30) / 100,
+                gain_max: (data.a_gain_max || 60) / 100,
+                vol_min: (data.a_vol_min || 0.1) * 1e8,
+                tp_ratio: data.a_tp_ratio || 180,
+                sl_ratio: data.a_sl_ratio || -86
+            },
+            b: {
+                gain_threshold: (data.b_gain_threshold || 30) / 100,
+                vol_min: (data.b_vol_min || 0.1) * 1e8,
+                tp_ratio: data.b_tp_ratio || 90,
+                sl_ratio: data.b_sl_ratio || -86
+            },
+            c: {
+                lookback_days: data.c_lookback_days || 3,
+                drop_threshold: (data.c_drop_threshold || 20) / 100,
+                vol_min: (data.c_vol_min || 0.1) * 1e8,
+                tp_ratio: data.c_tp_ratio || 210,
+                sl_ratio: data.c_sl_ratio || -86
+            },
+            d: {
+                window_minutes: data.d_window_minutes || 5,
+                gain_threshold: (data.d_gain_threshold || 5) / 100,
+                vol_min: (data.d_vol_min || 0.1) * 1e8,
+                tp_ratio: data.d_tp_ratio || 60,
+                sl_ratio: data.d_sl_ratio || -20
+            },
+            e: {
+                peak_gain_threshold: (data.e_peak_gain_threshold || 50) / 100,
+                retrace_target_gain: (data.e_retrace_target_gain || 10) / 100,
+                vol_min: (data.e_vol_min || 0.1) * 1e8,
+                tp_ratio: data.e_tp_ratio || 1200,
+                sl_ratio: data.e_sl_ratio || -86
+            },
+            f: {
+                lookback_hours: data.f_lookback_hours || 48,
+                fib_long: data.f_fib_long !== undefined ? data.f_fib_long : 0.618,
+                fib_short: data.f_fib_short !== undefined ? data.f_fib_short : 0.382,
+                tolerance_ratio: (data.f_tolerance_ratio !== undefined ? data.f_tolerance_ratio : 0.5) / 100,
+                vol_min: (data.f_vol_min || 0.1) * 1e8,
+                tp_ratio: data.f_tp_ratio || 120,
+                sl_ratio: data.f_sl_ratio || -86
+            }
+        };
+
+        fetch('/api/save_strategy_params', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({strategy_params: strategyParams})
+        })
+        .then(res => res.json())
+        .then(data => {
+            const statusEl = $('strategyParamsStatus');
+            if (data.status === 'success') {
+                statusEl.innerHTML = '<span class="text-success">✅ 策略参数保存成功</span>';
+                setTimeout(() => closeStrategyParams(), 1000);
+            } else {
+                statusEl.innerHTML = '<span class="text-danger">保存失败</span>';
+            }
+        });
+    }
+
+    // ========== 大市值币/股指表 ==========
+    function openExcludedModal() {
+        $('excludedModal').classList.add('show');
+        loadExcludedSymbols();
+    }
+    function closeExcludedModal() {
+        $('excludedModal').classList.remove('show');
+    }
+    function loadExcludedSymbols() {
+        fetch('/api/get_excluded_symbols_categorized')
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    renderExcludedList(data.crypto, data.index);
+                }
+            })
+            .catch(console.error);
+    }
+    function renderExcludedList(cryptoList, indexList) {
+        const cryptoContainer = $('excludedCryptoList');
+        const indexContainer = $('excludedIndexList');
+        if (!cryptoContainer || !indexContainer) return;
+
+        if (!cryptoList || cryptoList.length === 0) {
+            cryptoContainer.innerHTML = '<span class="text-muted">暂无币种</span>';
+        } else {
+            let html = '';
+            cryptoList.forEach(sym => {
+                html += `<span class="excluded-item">${sym} <span class="remove-symbol" onclick="removeExcludedSymbol('${sym}')">&times;</span></span>`;
+            });
+            cryptoContainer.innerHTML = html;
+        }
+
+        if (!indexList || indexList.length === 0) {
+            indexContainer.innerHTML = '<span class="text-muted">暂无股指</span>';
+        } else {
+            let html = '';
+            indexList.forEach(sym => {
+                html += `<span class="excluded-item">${sym} <span class="remove-symbol" onclick="removeExcludedSymbol('${sym}')">&times;</span></span>`;
+            });
+            indexContainer.innerHTML = html;
+        }
+    }
+    function removeExcludedSymbol(symbol) {
+        if (!confirm(`确定从黑名单中移除 ${symbol} 吗？`)) return;
+        fetch('/api/remove_excluded_symbols', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({symbols: [symbol]})
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                loadExcludedSymbols();
+            } else {
+                alert('移除失败: ' + data.msg);
+            }
+        })
+        .catch(err => alert('请求失败: ' + err));
+    }
+    function addExcludedSymbols() {
+        const input = $('newExcludedInput');
+        const raw = input.value.trim();
+        if (!raw) {
+            $('addExcludedStatus').innerHTML = '<span class="text-danger">请输入要添加的币种</span>';
+            return;
+        }
+        const symbols = raw.split(',').map(s => s.trim().toUpperCase()).filter(s => s);
+        if (symbols.length === 0) {
+            $('addExcludedStatus').innerHTML = '<span class="text-danger">无效输入</span>';
+            return;
+        }
+        $('addExcludedStatus').innerHTML = '<span class="text-info">添加中...</span>';
+        fetch('/api/add_excluded_symbols', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({symbols: symbols})
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                $('addExcludedStatus').innerHTML = `<span class="text-success">✅ 已添加: ${data.added.join(', ')}</span>`;
+                input.value = '';
+                loadExcludedSymbols();
+            } else {
+                $('addExcludedStatus').innerHTML = '<span class="text-danger">添加失败: ' + data.msg + '</span>';
+            }
+        })
+        .catch(err => {
+            $('addExcludedStatus').innerHTML = '<span class="text-danger">请求失败: ' + err + '</span>';
+        });
+    }
+    function clearAllExcluded() {
+        if (!confirm('确定要清空所有排除币种吗？')) return;
+        fetch('/api/clear_excluded_symbols', { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    loadExcludedSymbols();
+                } else {
+                    alert('清空失败');
+                }
+            });
+    }
+    function restoreDefaultExcluded() {
+        if (!confirm('确定要恢复为默认的大盘币列表吗？当前黑名单将被替换。')) return;
+        fetch('/api/restore_default_excluded', { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert(`✅ 已恢复默认大盘币列表，共 ${data.count} 个`);
+                    loadExcludedSymbols();
+                } else {
+                    alert('恢复失败');
+                }
+            });
+    }
+    $('excludedModal').addEventListener('click', function(e) { if (e.target === this) closeExcludedModal(); });
+
+    // ========== 大市值忽略开关 ==========
+    function toggleExcludeLargeCap() {
+        excludeLargeCap = !excludeLargeCap;
+        updateExcludeLargeCapButton();
+
+        fetch('/api/toggle_exclude_large_cap', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({})
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status !== 'success') {
+                excludeLargeCap = !excludeLargeCap;
+                updateExcludeLargeCapButton();
+                alert('切换大市值忽略失败');
+            }
+        })
+        .catch(err => {
+            excludeLargeCap = !excludeLargeCap;
+            updateExcludeLargeCapButton();
+            console.warn('切换大市值忽略失败:', err);
+        });
+    }
+
+    function updateExcludeLargeCapButton() {
+        const btn = $('excludeLargeCapBtn');
+        if (!btn) return;
+        if (excludeLargeCap) {
+            btn.className = 'toggle-btn btn-warning';
+            btn.innerText = '大市值忽略 开';
+        } else {
+            btn.className = 'toggle-btn btn-secondary';
+            btn.innerText = '大市值忽略 关';
+        }
+    }
+
+    // ---------- 程序开关 ----------
+    function toggleAutoTrade() {
+        autoTradeEnabled = !autoTradeEnabled;
+        updateAutoTradeButton();
+        fetch('/api/toggle_auto_trade', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({})
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                console.log('程序开关已切换至', data.auto_trade_enabled);
+            }
+        })
+        .catch(err => console.warn('切换程序开关失败:', err));
+    }
+    function updateAutoTradeButton() {
+        const btn = $('autoTradeBtn');
+        if (!btn) return;
+        if (autoTradeEnabled) {
+            btn.className = 'toggle-btn btn-success nav-auto-btn';
+            btn.innerText = '程序开关 开';
+        } else {
+            btn.className = 'toggle-btn btn-danger nav-auto-btn';
+            btn.innerText = '程序开关 关';
+        }
+    }
+
+    // ---------- 逐仓/全仓切换 ----------
+    function toggleMarginMode() {
+        marginMode = (marginMode === 'isolated') ? 'cross' : 'isolated';
+        updateMarginModeButton();
+        fetch('/api/toggle_margin_mode', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({})
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                console.log('保证金模式已切换至', data.margin_mode);
+            }
+        })
+        .catch(err => console.warn('切换保证金模式失败:', err));
+    }
+    function updateMarginModeButton() {
+        const btn = $('marginModeBtn');
+        if (!btn) return;
+        if (marginMode === 'cross') {
+            btn.className = 'toggle-btn btn-success';
+            btn.innerText = '全仓模式';
+        } else {
+            btn.className = 'toggle-btn btn-primary';
+            btn.innerText = '逐仓模式';
+        }
+    }
+
+    // ---------- 测试、重置 ----------
+    function testAlert() {
+        fetch('/api/test_alert', { method: 'POST' })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') alert('告警测试消息已发送，请检查Telegram');
+        });
+    }
+    function resetStats() {
+        if (!confirm('确定要重置所有交易统计数据吗？此操作不可恢复！')) return;
+        fetch('/api/reset_stats', { method: 'POST' })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert('统计已重置');
+                fetchDashboard();
+            } else {
+                alert('重置失败: ' + data.msg);
+            }
+        });
+    }
+
+    // ---------- 扫描器时钟 ----------
+    function localEngineClock() {
+        const el = $('scanner_status');
+        if (!el) return;
+        let now = Math.floor(Date.now() / 1000);
+        if (el.getAttribute('data-scan-state') === "scanning") {
+            let elapsed = now - scanStartTimestamp;
+            if (elapsed < 0) elapsed = 0;
+            el.innerHTML = `正在扫描...<br><span style="font-size:12px;">(已耗时: ${elapsed}秒)</span>`;
+            el.className = "fw-bold text-warning mb-0 text-center";
+            return;
+        }
+        if (!validTimestamp || targetNextScanTimestamp === 0) {
+            el.innerHTML = "⏳ 加载中...";
+            el.className = "fw-bold text-secondary mb-0";
+            return;
+        }
+        let remain = targetNextScanTimestamp - now;
+        let last = el.getAttribute('data-last-duration') || '0.0';
+        if (remain < 0) remain = 0;
+        if (remain > 300 && targetNextScanTimestamp > 0) {
+            remain = 180;
+            targetNextScanTimestamp = now + 180;
+        }
+        let minutes = Math.floor(remain / 60);
+        let seconds = remain % 60;
+        let displaySeconds = seconds < 10 ? '0' + seconds : seconds;
+        el.innerHTML = `⏳ 倒计时 ${minutes}:${displaySeconds}<br><span style="font-size:12px;">(上轮耗时: ${last}秒)</span>`;
+        el.className = "fw-bold text-info mb-0 text-center";
+    }
+
+    // ========== 策略按钮（全部根据VIP状态） ==========
+    function toggleStrategy(strategy) {
+        if (!isVip) {
+            alert('请先升级为VIP会员以使用策略切换功能');
+            return;
+        }
+
+        const oldState = strategyStates[strategy];
+        const newState = !oldState;
+
+        // 立即更新前端状态
+        strategyStates[strategy] = newState;
+        updateStrategyButtons();
+
+        // 发送请求保存
+        fetch('/api/toggle_strategy', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({strategy: strategy})
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                if (data.enabled !== undefined && data.enabled !== strategyStates[strategy]) {
+                    strategyStates[strategy] = data.enabled;
+                    updateStrategyButtons();
+                }
+                console.log(`策略${strategy} 切换至 ${data.enabled}`);
+            } else {
+                // 失败回滚
+                strategyStates[strategy] = oldState;
+                updateStrategyButtons();
+                alert('切换策略失败: ' + (data.msg || '未知错误'));
+            }
+        })
+        .catch(err => {
+            strategyStates[strategy] = oldState;
+            updateStrategyButtons();
+            console.warn('切换策略请求异常:', err);
+            alert('网络错误，策略状态已恢复');
+        });
+    }
+
+    // 更新所有策略按钮（VIP状态下可点击，否则灰色）
+    function updateStrategyButtons() {
+        for (let s of ['a','b','c','d','e','f']) {
+            let btn = $('btn_strategy_'+s);
+            if (!btn) continue;
+            let on = strategyStates[s];
+            if (isVip) {
+                btn.disabled = false;
+                btn.className = 'btn strategy-btn ' + (on ? 'btn-success' : 'btn-danger');
+                let dir = {a:'空', b:'空', c:'多', d:'空', e:'多', f:'斐波那契'}[s];
+                btn.innerText = `策略${s.toUpperCase()}(${dir})`;
+            } else {
+                btn.disabled = true;
+                btn.className = 'btn strategy-btn btn-secondary';
+                let dir = {a:'空', b:'空', c:'多', d:'空', e:'多', f:'斐波那契'}[s];
+                btn.innerText = `策略${s.toUpperCase()}(${dir}) VIP`;
+            }
+        }
+    }
+
+    // ========== 更新VIP显示 ==========
+    function updateVipDisplay(vipStatus, expiry) {
+        const badge = document.getElementById('vipBadge');
+        const expiryDisplay = document.getElementById('vipExpiryDisplay');
+        if (!badge) return;
+        if (vipStatus) {
+            badge.innerHTML = '<span class="badge-vip-gold ms-1"><i class="fas fa-crown me-1"></i>VIP</span>';
+            if (expiry && expiry !== 'None' && expiry !== 'null') {
+                const expiryDate = new Date(expiry.replace(' ', 'T'));
+                if (!isNaN(expiryDate)) {
+                    expiryDisplay.textContent = '到期: ' + expiry;
+                } else {
+                    expiryDisplay.textContent = '';
+                }
+            } else {
+                expiryDisplay.textContent = '';
+            }
+        } else {
+            badge.innerHTML = '<span class="badge bg-secondary ms-1">非会员</span>';
+            expiryDisplay.textContent = '';
+        }
+        isVip = vipStatus;
+        updateStrategyButtons();
+    }
+
+    // ---------- 主数据拉取 ----------
+    function fetchDashboard() {
+        if (isFetching) return;
+        isFetching = true;
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+        fetch('/api/dashboard?_=' + Date.now(), { signal: controller.signal })
+            .then(res => {
+                clearTimeout(timeoutId);
+                if (!res.ok) throw new Error('网络错误');
+                return res.json();
+            })
+            .then(data => {
+                let now = Math.floor(Date.now() / 1000);
+                let nowDate = new Date();
+                const updateEl = $('last_update');
+                if (updateEl) updateEl.innerText = '最后更新：' + nowDate.toLocaleTimeString();
+
+                const scannerEl = $('scanner_status');
+                if (scannerEl) {
+                    let isScanning = data.scanner_status && data.scanner_status.includes("正在扫描");
+                    scannerEl.setAttribute('data-last-duration', data.last_scan_duration || 0);
+                    scannerEl.setAttribute('data-scan-state', isScanning ? 'scanning' : 'idle');
+                }
+
+                let serverTs = Math.floor(data.next_scan_timestamp || 0);
+                if (serverTs > now) {
+                    targetNextScanTimestamp = serverTs;
+                    validTimestamp = true;
+                } else {
+                    if (!validTimestamp || targetNextScanTimestamp <= now) {
+                        targetNextScanTimestamp = now + 180;
+                        validTimestamp = true;
+                    }
+                }
+
+                scanStartTimestamp = Math.floor(data.scan_start_timestamp || 0);
+                localEngineClock();
+
+                const totalAssetsEl = $('total_assets');
+                if (totalAssetsEl) totalAssetsEl.innerText = Number(data.account_total_assets || 0).toFixed(2) + " U";
+                const availEl = $('available_margin');
+                if (availEl) availEl.innerText = Number(data.available_margin || 0).toFixed(2) + " U";
+
+                if (!isDirty) {
+                    const marginEl = $('input_margin');
+                    if (marginEl) marginEl.value = data.open_margin || 0;
+                    const levEl = $('input_leverage');
+                    if (levEl) levEl.value = data.leverage || 3;
+                    const saveBtn = $('save_btn');
+                    if (saveBtn) saveBtn.innerText = "保存参数";
+                }
+
+                const apiBtn = $('api_btn_text');
+                if (apiBtn) apiBtn.innerText = data.has_api_key ? '填充密钥' : '填充密钥';
+
+                // 策略状态：只在初始化时加载
+                if (!strategyInitialized && data.strategy_states) {
+                    for (let s of ['a','b','c','d','e','f']) {
+                        if (data.strategy_states.hasOwnProperty(s)) {
+                            strategyStates[s] = data.strategy_states[s];
+                        }
+                    }
+                    updateStrategyButtons();
+                    strategyInitialized = true;
+                }
+
+                // VIP 状态更新
+                if (data.is_vip !== undefined) {
+                    updateVipDisplay(data.is_vip, data.vip_expiry);
+                }
+
+                // 候选表
+                let candHtml = '';
+                if (data.candidate_pool && data.candidate_pool.length > 0) {
+                    data.candidate_pool.forEach(c => {
+                        let price = c.current_price > 0 ? (c.current_price < 0.0001 ? c.current_price.toFixed(7) + " U" : (c.current_price < 1 ? c.current_price.toFixed(5) + " U" : c.current_price.toFixed(4) + " U")) : "获取中...";
+                        let th = c.threshold_ratio ? c.threshold_ratio.toFixed(2) + "%" : "-";
+                        candHtml += `<tr>
+                            <td><b class="copyable-symbol" onclick="copySymbol('${c.symbol}')">${c.symbol}</b></td>
+                            <td><small>${c.reason}</small></td>
+                            <td><span class="badge-direction ${c.direction=='SHORT'?'bg-danger text-white':'bg-success text-white'}">${c.direction=='SHORT'?'空':'多'}</span></td>
+                            <td><small>${c.unopen_reason || ''}</small></td>
+                            <td class="fw-bold">${price}</td>
+                            <td>${th}</td>
+                            <td>${Number(c.priority || 0).toFixed(4)}</td>
+                        </tr>`;
+                    });
+                } else { candHtml = '<tr><td colspan="7" class="text-center text-muted">候选表空</td></tr>'; }
+                const candTable = $('candidate_table');
+                if (candTable) candTable.innerHTML = candHtml;
+
+                // 持仓表
+                let posHtml = '';
+                if (data.positions && data.positions.length > 0) {
+                    data.positions.forEach(p => {
+                        let cls = p.pnl_ratio >= 0 ? 'text-success fw-bold' : 'text-danger fw-bold';
+                        let price = p.current_price > 0 ? (p.current_price < 0.0001 ? p.current_price.toFixed(7) + " U" : (p.current_price < 1 ? p.current_price.toFixed(5) + " U" : p.current_price.toFixed(4) + " U")) : "获取中...";
+                        let leverageDisplay = p.leverage ? p.leverage + 'X' : '-';
+                        posHtml += `<tr>
+                            <td><b class="copyable-symbol" onclick="copySymbol('${p.symbol}')">${p.symbol}</b></td>
+                            <td><small>${p.open_reason || ''}</small></td>
+                            <td><span class="badge-direction ${p.direction=='SHORT'?'bg-danger text-white':'bg-success text-white'}">${p.direction=='SHORT'?'空':'多'}</span></td>
+                            <td><small>${p.open_time || ''}</small></td>
+                            <td class="fw-bold">${price}</td>
+                            <td>${p.amount}</td>
+                            <td>${p.margin.toFixed(2)} U</td>
+                            <td>${leverageDisplay}</td>
+                            <td class="${cls}">${p.pnl.toFixed(2)} U</td>
+                            <td class="${cls}">${p.pnl_ratio.toFixed(2)} %</td>
+                        </tr>`;
+                    });
+                } else { posHtml = '<tr><td colspan="10" class="text-center text-muted">无持仓</td></tr>'; }
+                const posTable = $('position_table');
+                if (posTable) posTable.innerHTML = posHtml;
+
+                fetchStats();
+            })
+            .catch(err => {
+                clearTimeout(timeoutId);
+                if (err.name !== 'AbortError') {
+                    console.warn('Dashboard请求失败:', err);
+                    // 显示错误提示，避免一直转圈
+                    const statusEl = $('scanner_status');
+                    if (statusEl) statusEl.innerHTML = '⚠️ 数据加载失败，请刷新';
+                }
+            })
+            .finally(() => {
+                isFetching = false;
+            });
+    }
+
+    // ---------- 统计数据 ----------
+    function fetchStats() {
+        if (window._statsFetching) return;
+        window._statsFetching = true;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+        fetch('/api/stats?_=' + Date.now(), { signal: controller.signal })
+            .then(res => {
+                clearTimeout(timeoutId);
+                if (!res.ok) throw new Error('网络错误');
+                return res.json();
+            })
+            .then(data => {
+                const real = data.real || {};
+                document.getElementById('stat_total_trades').innerText = real.total_trades || 0;
+                document.getElementById('stat_win_trades').innerText = real.win_trades || 0;
+                document.getElementById('stat_win_rate').innerText = (real.win_rate || 0) + '%';
+                document.getElementById('stat_total_pnl').innerText = (real.total_pnl || 0).toFixed(2);
+            })
+            .catch(err => {
+                clearTimeout(timeoutId);
+                if (err.name !== 'AbortError') {
+                    console.warn('Stats请求失败:', err);
+                }
+            })
+            .finally(() => {
+                window._statsFetching = false;
+            });
+    }
+
+    // ---------- 保存参数 ----------
+    function saveParams() {
+        if (saveCooldown) return;
+        saveCooldown = true;
+        let btn = $('save_btn');
+        if (btn) btn.innerText = "⏳ 保存...";
+        const marginVal = $('input_margin') ? $('input_margin').value : 10;
+        const levVal = $('input_leverage') ? $('input_leverage').value : 3;
+        fetch('/api/control', {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({
+                open_margin: marginVal,
+                leverage: levVal
+            })
+        }).then(() => {
+            isDirty = false;
+            if (btn) btn.innerText = "保存参数";
+            setTimeout(() => { saveCooldown = false; }, 2000);
+        }).catch(() => {
+            saveCooldown = false;
+            if (btn) btn.innerText = "保存参数";
+        });
+    }
+
+    // ---------- 初始化 ----------
+    document.addEventListener('DOMContentLoaded', function() {
+        const strategies = ['a','b','c','d','e','f'];
+        strategies.forEach(s => {
+            const btn = $('btn_strategy_'+s);
+            if (btn) btn.onclick = () => toggleStrategy(s);
+        });
+
+        fetch('/api/dashboard?_=' + Date.now())
+            .then(res => res.json())
+            .then(data => {
+                const marginEl = $('input_margin');
+                if (marginEl) marginEl.value = data.open_margin || 0;
+                const levEl = $('input_leverage');
+                if (levEl) levEl.value = data.leverage || 3;
+                autoTradeEnabled = data.auto_trade_enabled || false;
+                updateAutoTradeButton();
+                marginMode = data.margin_mode || 'isolated';
+                updateMarginModeButton();
+                if (data.exclude_large_cap !== undefined) {
+                    excludeLargeCap = data.exclude_large_cap;
+                    updateExcludeLargeCapButton();
+                }
+                const saveBtn = $('save_btn');
+                if (saveBtn) saveBtn.innerText = "保存参数";
+                isDirty = false;
+
+                // 首次加载策略状态
+                if (data.strategy_states) {
+                    for (let s of ['a','b','c','d','e','f']) {
+                        if (data.strategy_states.hasOwnProperty(s)) {
+                            strategyStates[s] = data.strategy_states[s];
+                        }
+                    }
+                    updateStrategyButtons();
+                    strategyInitialized = true;
+                }
+                if (data.is_vip !== undefined) {
+                    updateVipDisplay(data.is_vip, data.vip_expiry);
+                }
+            })
+            .catch(console.error);
+
+        fetchDashboard();
+        dashboardInterval = setInterval(fetchDashboard, 1000);
+        setInterval(localEngineClock, 1000);
+
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden) {
+                fetchDashboard();
+            }
+        });
+    });
+</script>
+</body>
+</html>

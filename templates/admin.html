@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>妖币系统 · 管理后台</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+<style>
+:root{
+  --bg1:#eaf7f2; --bg2:#d6ede9; --ink:#0d2330; --muted:#4d7080;
+  --glass:rgba(255,255,255,0.62); --line:rgba(13,150,130,0.18);
+  --brand:#17b38a; --brand2:#0ea5a0;
+  --gold:#f0b90b; --danger:#ef4444;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; min-height:100vh; color:var(--ink);
+  font-family:"Microsoft YaHei","PingFang SC",system-ui,sans-serif;
+  background:radial-gradient(1200px 500px at 15% -5%,rgba(23,179,138,.20),transparent 55%),
+             radial-gradient(1000px 450px at 100% 0%,rgba(14,165,160,.16),transparent 55%),
+             linear-gradient(160deg,var(--bg1),var(--bg2) 70%);
+  background-attachment:fixed;
+}
+.navbar{
+  backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+  background:var(--glass); border-bottom:1px solid var(--line);
+  position:sticky; top:0; z-index:10;
+}
+.navbar-brand{
+  font-weight:800; letter-spacing:.5px;
+  background:linear-gradient(90deg,var(--brand),var(--brand2));
+  -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+  font-size:1.25rem;
+}
+.brand-ico{ -webkit-text-fill-color:initial; }
+.admin-chip{
+  background:rgba(23,179,138,.12); color:var(--brand2); border:1px solid var(--line);
+  padding:.25rem .7rem; border-radius:50rem; font-size:.85rem; font-weight:600;
+}
+.nav-link-soft{
+  color:var(--muted); text-decoration:none; font-size:.9rem;
+  padding:.3rem .7rem; border-radius:.6rem; transition:.15s;
+}
+.nav-link-soft:hover{ color:var(--brand2); background:rgba(23,179,138,.10); }
+.container{ max-width:1060px; }
+.glass-card{
+  backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+  background:var(--glass); border:1px solid var(--line); border-radius:1.1rem;
+  box-shadow:0 8px 30px rgba(15,60,50,.06);
+}
+.toolbar-card{ padding:.9rem 1.1rem; margin-bottom:1rem; }
+.badge-vip{
+  background:linear-gradient(135deg,#f7d24a,#f0b90b); color:#1a1600;
+  border-radius:50rem; padding:.3rem .6rem; font-size:.72rem; font-weight:700;
+  box-shadow:0 2px 8px rgba(240,185,11,.35);
+}
+.badge-user{ background:rgba(13,35,48,.10); color:var(--muted); border-radius:50rem; padding:.28rem .6rem; font-size:.72rem; font-weight:600; }
+.badge-admin{
+  background:linear-gradient(135deg,#17b38a,#0ea5a0); color:#fff;
+  border-radius:50rem; padding:.3rem .6rem; font-size:.72rem; font-weight:700;
+  box-shadow:0 2px 8px rgba(14,165,160,.40);
+}
+.table{ --bs-table-bg:transparent; color:var(--ink); margin-bottom:0; border-collapse:separate; border-spacing:0; }
+.table thead th{
+  background:rgba(23,179,138,.08); color:var(--muted); font-weight:600; font-size:.8rem;
+  border:none; padding:.8rem 1rem; text-transform:uppercase; letter-spacing:.4px;
+}
+.table thead th:first-child{ border-radius:1rem 0 0 0; }
+.table thead th:last-child{ border-radius:0 1rem 0 0; }
+.table tbody td{ padding:.75rem 1rem; border-color:rgba(13,150,130,.08); vertical-align:middle; }
+.table tbody tr{ transition:.12s; }
+.table tbody tr:hover{ background:rgba(23,179,138,.05); }
+.table tbody tr:last-child td:first-child{ border-radius:0 0 0 1rem; }
+.table tbody tr:last-child td:last-child{ border-radius:0 0 1rem 0; }
+.status-ok{ color:var(--brand2); font-weight:600; }
+.status-off{ color:var(--muted); }
+.mini{ font-size:.78rem; color:var(--muted); }
+.btn{
+  border-radius:.65rem; font-size:.8rem; font-weight:600; padding:.3rem .65rem;
+}
+.btn-vip-on{ background:linear-gradient(135deg,var(--brand),var(--brand2)); color:#fff; border:none; box-shadow:0 3px 10px rgba(23,179,138,.30); }
+.btn-vip-on:hover{ filter:brightness(1.05); color:#fff; }
+.btn-vip-off{ background:rgba(13,35,48,.08); color:var(--brand2); border:1px solid var(--line); }
+.btn-vip-off:hover{ background:rgba(23,179,138,.12); color:var(--brand2); }
+.btn-ghost{ background:transparent; color:var(--muted); border:1px solid rgba(13,35,48,.14); }
+.btn-ghost:hover{ border-color:var(--brand2); color:var(--brand2); background:rgba(23,179,138,.08); }
+.btn-warn{ background:transparent; color:#e0a20b; border:1px solid rgba(240,185,11,.4); }
+.btn-warn:hover{ background:rgba(240,185,11,.10); color:#c79100; }
+.btn-danger{ background:transparent; color:var(--danger); border:1px solid rgba(239,68,68,.4); }
+.btn-danger:hover{ background:rgba(239,68,68,.08); color:var(--danger); }
+.btn-info{ background:transparent; color:var(--brand2); border:1px solid var(--line); }
+.btn-info:hover{ background:rgba(23,179,138,.10); color:var(--brand2); }
+.btn-refresh{ background:linear-gradient(135deg,var(--brand),var(--brand2)); color:#fff; border:none; box-shadow:0 3px 10px rgba(23,179,138,.28); }
+.btn-refresh:hover{ filter:brightness(1.05); color:#fff; }
+.pkg-wrap{ display:flex; flex-wrap:wrap; gap:.35rem; align-items:center; }
+.pkg-label{ font-size:.78rem; color:var(--muted); }
+</style>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="container-fluid px-4 py-1">
+    <span class="navbar-brand"><span class="brand-ico">📡</span> 妖币雷达 · 管理后台</span>
+    <div class="d-flex align-items-center gap-2">
+      <span class="admin-chip">👑 管理员 &nbsp;{{ username }}</span>
+      <a class="nav-link-soft" href="/yaob/">← 返回交易面板</a>
+      <a class="nav-link-soft" href="/yaob/logout">登出</a>
+    </div>
+  </div>
+</nav>
+
+<div class="container py-4">
+  <div class="glass-card toolbar-card d-flex flex-wrap justify-content-between align-items-center gap-2">
+    <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+      <span style="color:var(--brand2)">≡</span> 用户列表
+      <span class="badge-vip" style="font-weight:800"><span id="userCount">0</span> 个账号</span>
+    </h5>
+    <div class="d-flex align-items-center gap-2">
+      <span class="mini"><span class="status-ok">●</span> 实时</span>
+      <button class="btn btn-refresh btn-sm" onclick="refresh()">↻ 刷新</button>
+    </div>
+  </div>
+
+  <div class="glass-card p-0 overflow-hidden">
+    <table class="table mb-0">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>用户名</th>
+          <th>身份</th>
+          <th>VIP 状态</th>
+          <th>注册时间</th>
+          <th style="min-width:250px">操作</th>
+        </tr>
+      </thead>
+      <tbody id="userRows"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+const API = '/yaob/api/admin/';
+
+async function refresh() {
+  const res = await fetch(API + 'users', { headers: {'Accept':'application/json'} });
+  const data = await res.json();
+  if (data.status !== 'success') { document.getElementById('userRows').innerHTML = '<tr><td colspan="6" class="text-danger">' + (data.msg||'无权限') + '</td></tr>'; return; }
+  const tbody = document.getElementById('userRows');
+  document.getElementById('userCount').textContent = data.users.length;
+  tbody.innerHTML = '';
+  data.users.forEach((u, i) => {
+    const tr = document.createElement('tr');
+    const isAdmin = u.is_admin;
+    const roleHtml = isAdmin
+      ? '<span class="badge-admin">管理员</span>'
+      : (u.is_vip ? '<span class="badge-vip">VIP</span>' : '<span class="badge-user">普通</span>');
+    const vipBadge = isAdmin ? '<span class="mini">— 永久</span>' : (u.is_vip
+      ? '<span class="status-ok">● 已开通</span>' + (u.vip_expiry ? '<div class="mini">' + u.vip_expiry + '</div>' : '<div class="mini">永久</div>')
+      : '<span class="status-off">○ 未开通</span>');
+    let ops = isAdmin ? '<span class="mini">管理员账号</span>' : (u.is_vip
+      ? `
+      <div class="pkg-wrap mb-1">
+        <button class="btn btn-sm btn-vip-off" onclick="extendVip(\"${u.username}\")">延长</button>
+        <button class="btn btn-sm btn-warn" onclick="revokeVip(\"${u.username}\")">撤销VIP</button>
+        <button class="btn btn-sm btn-danger" onclick='delUser("${u.username}")'>删除</button>
+      </div>`
+      : `
+      <div class="pkg-wrap mb-1">
+        <button class="btn btn-sm btn-vip-on" onclick="setVip(\"${u.username}\")">开通VIP</button>
+        <button class="btn btn-sm btn-danger" onclick='delUser("${u.username}")'>删除</button>
+      </div>`);
+    // 非管理员的快捷套餐授权
+    const pkgs = isAdmin ? '' : `<div class="pkg-wrap">
+      <span class="pkg-label">⚡快捷</span>
+      ${[30,90,180,365].map(d => `<button class="btn btn-sm btn-info" onclick='quickVip("${u.username}", ${d})'>${d}天</button>`).join('')}
+    </div>`;
+    tr.innerHTML = `<td class="mini">${i+1}</td>
+      <td><strong>${esc(u.username)}</strong></td>
+      <td>${roleHtml}</td>
+      <td>${vipBadge}</td>
+      <td class="mini">${u.created}</td>
+      <td>${ops}<div>${pkgs}</div></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+async function setVip(username) {
+  const daysStr = prompt(`给 ${username} 开通 VIP\n\n请输入有效天数（0 或留空 = 永久，如 30 / 90 / 365）：`, '30');
+  if (daysStr === null) return;  // 取消
+  const days = parseInt(daysStr.trim() || '0', 10) || 0;
+  if (!confirm(`确定给 ${username} 开通 VIP，天数：${days<=0?'永久':days} 天？`)) return;
+  const res = await fetch(API + 'set_vip', {
+    method:'POST', headers:{'Content-Type':'application/json','Accept':'application/json'},
+    body: JSON.stringify({ username, vip: true, days })
+  });
+  const d = await res.json();
+  alert(d.msg || '操作失败');
+  refresh();
+}
+
+async function quickVip(username, days) {
+  if (!confirm(`给 ${username} 开通 ${days} 天 VIP？`)) return;
+  const res = await fetch(API + 'set_vip', {
+    method:'POST', headers:{'Content-Type':'application/json','Accept':'application/json'},
+    body: JSON.stringify({ username, vip: true, days })
+  });
+  const d = await res.json();
+  alert(d.msg || '操作失败');
+  refresh();
+}
+
+async function revokeVip(username) {
+  if (!confirm(`确定撤销 ${username} 的 VIP？`)) return;
+  const res = await fetch(API + 'set_vip', {
+    method:'POST', headers:{'Content-Type':'application/json','Accept':'application/json'},
+    body: JSON.stringify({ username, vip: false })
+  });
+  const d = await res.json();
+  alert(d.msg || '操作失败');
+  refresh();
+}
+
+async function extendVip(username) {
+  const daysStr = prompt(`${username} 已是 VIP，可调整/延长有效期\n\n请输入有效天数（0 或留空 = 永久，如 30 / 90 / 365）：`, '30');
+  if (daysStr === null) return;
+  const days = parseInt(daysStr.trim() || '0', 10) || 0;
+  if (!confirm(`确定将 ${username} 的 VIP 设为：${days<=0?'永久':days} 天？`)) return;
+  const res = await fetch(API + 'set_vip', {
+    method:'POST', headers:{'Content-Type':'application/json','Accept':'application/json'},
+    body: JSON.stringify({ username, vip: true, days })
+  });
+  const d = await res.json();
+  alert(d.msg || '操作失败');
+  refresh();
+}
+
+async function delUser(username) {
+  if (!confirm(`确定删除账号 ${username}？此操作不可恢复！`)) return;
+  const res = await fetch(API + 'delete_user', {
+    method:'POST',
+    headers:{'Content-Type':'application/json','Accept':'application/json'},
+    body: JSON.stringify({ username })
+  });
+  const d = await res.json();
+  alert(d.msg || '操作失败');
+  refresh();
+}
+
+function esc(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+refresh();
+</script>
+</body>
+</html>
